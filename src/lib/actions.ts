@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { passwordsMatch, SESSION_COOKIE, sessionToken } from "./session";
 import { admin } from "./supabase";
 import { externalLinks, parseUrls, scrapeWebsite } from "./scrape";
+import type { MapPlace } from "./maps";
 
 function text(form: FormData, key: string) {
   return String(form.get(key) || "").trim();
@@ -27,10 +28,20 @@ async function touch(paths: string[]) {
   paths.forEach((path) => revalidatePath(path));
 }
 
+async function adminPasswordOk(email: string, password: string) {
+  if (!email || !password) return false;
+  const { data, error } = await admin().rpc("admin_login", {
+    p_email: email,
+    p_password: password
+  });
+  if (!error) return data === true;
+  return passwordsMatch(password, process.env.DASHBOARD_PASSWORD || "");
+}
+
 export async function login(form: FormData) {
-  const expected = process.env.DASHBOARD_PASSWORD || "";
+  const email = text(form, "email").toLowerCase();
   const password = text(form, "password");
-  if (!passwordsMatch(password, expected)) {
+  if (!(await adminPasswordOk(email, password))) {
     redirect("/dashboard/login?error=1");
   }
   const jar = await cookies();
@@ -195,6 +206,67 @@ export async function collectLeads(form: FormData) {
   const { error } = await admin().from("leads").insert(rows);
   if (error) redirect(`/dashboard/leads?error=${encodeURIComponent(error.message)}`);
   redirect("/dashboard/leads?saved=1");
+}
+
+export async function saveMapLeads(form: FormData) {
+  const picked = new Set(form.getAll("pick").map((value) => String(value)));
+  const readSites = form.get("readSites") === "on";
+  const rows = [];
+  let reads = 0;
+  for (const raw of form.getAll("place")) {
+    let place: MapPlace;
+    try {
+      place = JSON.parse(String(raw)) as MapPlace;
+    } catch {
+      continue;
+    }
+    if (!picked.has(place.id)) continue;
+    let emails = place.emails;
+    let phones = place.phones;
+    let whatsapp = "";
+    let contact_name = "";
+    let notes = place.address ? `OpenStreetMap. ${place.address}` : "OpenStreetMap listing";
+    if (readSites && place.website && reads < 4) {
+      reads += 1;
+      const scraped = await scrapeWebsite(place.website, 2);
+      if (scraped.emails) emails = scraped.emails;
+      if (scraped.phones) phones = [phones, scraped.phones].filter(Boolean).join("; ");
+      whatsapp = scraped.whatsapp;
+      contact_name = scraped.contact_name;
+      if (scraped.notes) notes = `${notes}. ${scraped.notes}`;
+    }
+    rows.push({
+      business_name: place.business_name,
+      website: place.website,
+      emails,
+      phones,
+      whatsapp,
+      contact_name,
+      city: place.city,
+      category: place.category,
+      source_url: place.source_url,
+      notes
+    });
+  }
+  if (!rows.length) redirect("/dashboard/leads?error=Choose%20at%20least%20one%20listing");
+  const { error } = await admin().from("leads").insert(rows);
+  if (error) redirect(`/dashboard/leads?error=${encodeURIComponent(error.message)}`);
+  redirect(`/dashboard/leads?saved=${rows.length}`);
+}
+
+export async function updateLead(form: FormData) {
+  const { error } = await admin()
+    .from("leads")
+    .update({
+      contact_name: text(form, "contact_name"),
+      current_pos: text(form, "current_pos"),
+      contacted: text(form, "contacted") === "yes"
+    })
+    .eq("id", text(form, "id"));
+  if (error) {
+    redirect(`/dashboard/leads?error=${encodeURIComponent("Run the outreach SQL once, then save this row again.")}`);
+  }
+  redirect("/dashboard/leads");
 }
 
 export async function deleteLead(form: FormData) {

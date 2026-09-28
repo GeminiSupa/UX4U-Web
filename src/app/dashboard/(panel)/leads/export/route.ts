@@ -10,29 +10,28 @@ function cell(value: string) {
 
 export async function GET() {
   const leads = await getLeads();
-  const columns = [
-    "business_name",
-    "website",
-    "emails",
-    "phones",
-    "whatsapp",
-    "contact_name",
-    "city",
-    "category",
-    "source_url",
-    "notes",
-    "created_at"
-  ] as const;
+  const header = ["Restaurant", "City", "Owner", "Email", "Phone", "Website", "Current POS", "Contacted"];
   const lines = [
-    columns.join(","),
+    header.join(","),
     ...leads.map((lead) =>
-      columns.map((column) => cell(String((lead as Record<string, string>)[column] || ""))).join(",")
+      [
+        lead.business_name,
+        lead.city,
+        lead.contact_name,
+        lead.emails,
+        lead.phones,
+        lead.website,
+        lead.current_pos,
+        lead.contacted ? "Yes" : "No"
+      ]
+        .map((value) => cell(String(value || "")))
+        .join(",")
     )
   ];
   return new Response(lines.join("\n"), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": "attachment; filename=ux4u-leads.csv"
+      "Content-Disposition": "attachment; filename=ux4u-restaurant-outreach.csv"
     }
   });
 }

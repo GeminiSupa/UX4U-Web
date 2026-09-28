@@ -63,6 +63,8 @@ create table if not exists leads (
   category text not null default '',
   source_url text not null default '',
   notes text not null default '',
+  current_pos text not null default '',
+  contacted boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -73,6 +75,34 @@ create table if not exists site_settings (
 
 insert into site_settings (id, seeded) values (1, false) on conflict (id) do nothing;
 
+create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists admins (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  name text not null default '',
+  password_hash text not null,
+  created_at timestamptz not null default now()
+);
+
+create or replace function admin_login(p_email text, p_password text)
+returns boolean
+language sql
+security definer
+set search_path = public, extensions
+as $$
+  select exists (
+    select 1
+    from admins
+    where lower(email) = lower(p_email)
+      and password_hash = crypt(p_password, password_hash)
+  );
+$$;
+
+revoke all on function admin_login(text, text) from public;
+revoke all on function admin_login(text, text) from anon, authenticated;
+grant execute on function admin_login(text, text) to service_role;
+
 alter table team_members enable row level security;
 alter table projects enable row level security;
 alter table offers enable row level security;
@@ -80,6 +110,7 @@ alter table posts enable row level security;
 alter table inquiries enable row level security;
 alter table leads enable row level security;
 alter table site_settings enable row level security;
+alter table admins enable row level security;
 
 drop policy if exists "public read team" on team_members;
 create policy "public read team" on team_members for select to anon, authenticated using (published);

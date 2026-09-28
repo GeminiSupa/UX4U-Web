@@ -13,8 +13,18 @@ export default async function LoginPage({
         <p className="text-xs tracking-[0.22em] text-lime">UX4U</p>
         <h1 className="mt-3 font-serif text-4xl">Studio desk</h1>
         <p className="mt-3 text-sm text-paper/65">Team, projects, offers, journal, and the lead list.</p>
-        {query.error ? <p className="mt-4 text-sm text-lime">That password did not match.</p> : null}
+        {query.error ? <p className="mt-4 text-sm text-lime">That email or password did not match.</p> : null}
         <label className="mt-6 block text-sm">
+          Email
+          <input
+            name="email"
+            type="email"
+            required
+            autoComplete="username"
+            className="mt-2 w-full border border-white/15 bg-white/5 px-3 py-3 text-paper"
+          />
+        </label>
+        <label className="mt-4 block text-sm">
           Password
           <input
             name="password"

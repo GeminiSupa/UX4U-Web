@@ -171,6 +171,8 @@ export type Lead = {
   category: string;
   source_url: string;
   notes: string;
+  current_pos: string;
+  contacted: boolean;
   created_at: string;
 };
 
