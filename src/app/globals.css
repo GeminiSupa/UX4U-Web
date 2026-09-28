@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #efeae1;
+  color: #161815;
+}
+
+::selection {
+  background: #d7f26a;
+  color: #161815;
+}
+
+.display {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+}
+
+.rule {
+  background-image: linear-gradient(to right, rgba(22, 24, 21, 0.16) 1px, transparent 1px);
+  background-size: 12px 1px;
+  background-repeat: repeat-x;
+  background-position: left bottom;
+}
+
+input,
+textarea,
+select {
+  accent-color: #1c6b4a;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #161815;
+  outline-offset: 2px;
+}
