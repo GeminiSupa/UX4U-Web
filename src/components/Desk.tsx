@@ -42,7 +42,7 @@ export function Desk({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto hidden space-y-3 px-5 py-5 lg:block">
+        <div className="flex gap-5 px-5 pb-4 text-sm text-paper/70 lg:mt-auto lg:block lg:space-y-3 lg:py-5">
           <Link href="/" className="block text-sm text-paper/60 hover:text-paper">
             View the site
           </Link>

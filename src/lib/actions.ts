@@ -16,6 +16,21 @@ function checked(form: FormData, key: string) {
   return form.get(key) === "on";
 }
 
+async function storeImage(file: FormDataEntryValue | null, folder: string) {
+  if (!(file instanceof File) || file.size === 0) return "";
+  if (!file.type.startsWith("image/")) throw new Error("Use an image file");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB");
+  const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `${folder}/${crypto.randomUUID()}.${extension}`;
+  const supabase = admin();
+  const { error } = await supabase.storage.from("studio").upload(path, Buffer.from(await file.arrayBuffer()), {
+    contentType: file.type,
+    upsert: false
+  });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("studio").getPublicUrl(path).data.publicUrl;
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -63,13 +78,21 @@ export async function logout() {
 
 export async function saveTeam(form: FormData) {
   const id = text(form, "id");
-  const row = {
+  let photo_url = text(form, "photo_url");
+  try {
+    const uploaded = await storeImage(form.get("photo"), "team");
+    if (uploaded) photo_url = uploaded;
+  } catch {
+    redirect("/dashboard/team?error=1");
+  }
+  const row: Record<string, string | number | boolean> = {
     name: text(form, "name"),
     role: text(form, "role"),
     bio: text(form, "bio"),
     sort_order: Number(text(form, "sort_order") || "0"),
     published: checked(form, "published")
   };
+  if (photo_url) row.photo_url = photo_url;
   if (!row.name || !row.role) redirect("/dashboard/team?error=1");
   const supabase = admin();
   const result = id
@@ -88,13 +111,20 @@ export async function deleteTeam(form: FormData) {
 
 export async function saveProject(form: FormData) {
   const id = text(form, "id");
+  let image_url = text(form, "image_url");
+  try {
+    const uploaded = await storeImage(form.get("image"), "work");
+    if (uploaded) image_url = uploaded;
+  } catch {
+    redirect("/dashboard/projects?error=1");
+  }
   const row = {
     name: text(form, "name"),
     url: text(form, "url"),
     summary: text(form, "summary"),
     features: text(form, "features"),
     services: text(form, "services"),
-    image_url: text(form, "image_url"),
+    image_url,
     sort_order: Number(text(form, "sort_order") || "0"),
     published: checked(form, "published")
   };

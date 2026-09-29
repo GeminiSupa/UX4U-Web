@@ -3,6 +3,7 @@ export type TeamMember = {
   name: string;
   role: string;
   bio: string;
+  photo_url: string;
   sort_order: number;
   published: boolean;
 };
@@ -60,6 +61,7 @@ export const seedTeam: TeamMember[] = [
     name: "Omer Farooq",
     role: "CEO, full-stack developer",
     bio: "Sets the build and stays in the code. Product scope, architecture, and the path from a rough idea to something a customer can use.",
+    photo_url: "",
     sort_order: 1,
     published: true
   },
@@ -68,6 +70,7 @@ export const seedTeam: TeamMember[] = [
     name: "Muhammad Maaz Akram",
     role: "AI automation engineer",
     bio: "Connects the tools a business already has and removes the manual steps between them.",
+    photo_url: "",
     sort_order: 2,
     published: true
   },
@@ -76,6 +79,7 @@ export const seedTeam: TeamMember[] = [
     name: "Muhammad Abu Bakar Siddique",
     role: "Design and marketing",
     bio: "The look of the product and the story around it, so the offer is obvious before anyone reads a feature list.",
+    photo_url: "",
     sort_order: 3,
     published: true
   },
@@ -84,6 +88,7 @@ export const seedTeam: TeamMember[] = [
     name: "Muhammad Ali",
     role: "SEO, Meta ads, marketing",
     bio: "Search and paid social. Gets the right pages in front of the people already looking, and tunes the ads that fill the gap.",
+    photo_url: "",
     sort_order: 4,
     published: true
   }

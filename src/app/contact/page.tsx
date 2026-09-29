@@ -18,10 +18,10 @@ export default async function ContactPage({
   return (
     <>
       <Header />
-      <main className="mx-auto grid max-w-6xl gap-12 px-5 py-14 lg:grid-cols-[0.8fr_1.1fr]">
+      <main className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-5 sm:py-14 lg:grid-cols-[0.8fr_1.1fr] lg:gap-12">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-moss">Contact</p>
-          <h1 className="display mt-4 text-5xl sm:text-6xl">Tell us where you are.</h1>
+          <h1 className="display mt-4 text-4xl sm:text-6xl">Tell us where you are.</h1>
           <p className="mt-6 text-lg leading-relaxed text-ink/75">
             A concept, a half-built product, or a business that needs search, ads, and a cleaner operation.
             Write what you have. We reply from info@ux4u.online.

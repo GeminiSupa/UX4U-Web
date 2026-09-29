@@ -26,6 +26,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">Services<input className={control} name="services" placeholder="Product, SEO" /></label>
           <label className="text-sm">Image URL<input className={control} name="image_url" /></label>
+          <label className="text-sm">Or upload an image<input className={control} name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" /></label>
           <label className="text-sm">Order<input className={control} name="sort_order" type="number" defaultValue={projects.length + 1} /></label>
           <label className="flex items-end gap-2 text-sm"><input name="published" type="checkbox" defaultChecked /> Published</label>
         </div>
@@ -46,6 +47,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="text-sm">Services<input className={control} name="services" defaultValue={project.services} /></label>
                 <label className="text-sm">Image URL<input className={control} name="image_url" defaultValue={project.image_url} /></label>
+                <label className="text-sm">Or upload an image<input className={control} name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" /></label>
                 <label className="text-sm">Order<input className={control} name="sort_order" type="number" defaultValue={project.sort_order} /></label>
                 <label className="flex items-end gap-2 text-sm">
                   <input name="published" type="checkbox" defaultChecked={project.published} /> Published

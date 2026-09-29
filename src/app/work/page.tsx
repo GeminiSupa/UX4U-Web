@@ -14,9 +14,9 @@ export default async function WorkPage() {
   return (
     <>
       <Header />
-      <main className="mx-auto max-w-6xl px-5 py-14">
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14">
         <p className="text-xs uppercase tracking-[0.22em] text-moss">Work</p>
-        <h1 className="display mt-4 max-w-3xl text-5xl sm:text-6xl">Products and sites we have taken to market.</h1>
+        <h1 className="display mt-4 max-w-3xl text-4xl sm:text-6xl">Products and sites we have taken to market.</h1>
         <p className="mt-6 max-w-2xl text-lg text-ink/70">
           A sample of live work, with the homepage of each product.
         </p>
@@ -27,7 +27,7 @@ export default async function WorkPage() {
                 <img
                   src={project.image_url}
                   alt={`${project.name} homepage`}
-                  className="h-72 w-full object-cover object-top sm:h-96"
+                  className="h-52 w-full object-cover object-top sm:h-96"
                 />
               ) : null}
               <div className="grid gap-6 p-5 lg:grid-cols-[14rem_1fr]">

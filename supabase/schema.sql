@@ -3,6 +3,7 @@ create table if not exists team_members (
   name text not null,
   role text not null,
   bio text not null default '',
+  photo_url text not null default '',
   sort_order int not null default 0,
   published boolean not null default true,
   created_at timestamptz not null default now()

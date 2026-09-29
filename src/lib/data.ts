@@ -23,6 +23,7 @@ function mapTeam(row: Record<string, unknown>): TeamMember {
     name: asText(row.name),
     role: asText(row.role),
     bio: asText(row.bio),
+    photo_url: asText(row.photo_url),
     sort_order: Number(row.sort_order) || 0,
     published: Boolean(row.published)
   };
