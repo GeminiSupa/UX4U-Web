@@ -21,8 +21,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
-        <Link href="/" className="text-sm font-semibold tracking-[0.18em]">
-          UX4U
+        <Link href="/" className="shrink-0" aria-label="UX4U">
+          <img src="/logo.png" alt="" className="h-7 w-auto sm:h-8" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm sm:flex">
           {links.map(([label, href]) => (

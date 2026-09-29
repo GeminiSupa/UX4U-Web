@@ -20,7 +20,7 @@ export function Desk({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#f6f4ef] text-ink lg:grid lg:grid-cols-[220px_1fr]">
       <aside className="flex flex-col bg-ink text-paper lg:min-h-screen">
         <div className="px-5 py-5">
-          <p className="text-xs tracking-[0.2em] text-lime">UX4U</p>
+          <img src="/logo-on-dark.png" alt="UX4U" className="h-7 w-auto" />
           <p className="mt-1 text-sm text-paper/60">Studio desk</p>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-4 lg:block lg:space-y-1">
