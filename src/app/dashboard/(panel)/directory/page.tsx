@@ -2,6 +2,7 @@ import Link from "next/link";
 import { saveMapLeads } from "@/lib/actions";
 import { control } from "@/lib/ui";
 import { SubmitButton } from "@/components/SubmitButton";
+import { FindingRow, SelectAllButton } from "@/components/FindingRow";
 import { mapCategories, searchDirectory, type MapPlace } from "@/lib/maps";
 
 export const dynamic = "force-dynamic";
@@ -106,7 +107,10 @@ export default async function DirectoryPage({
 
           <form action={saveMapLeads} className="mt-6 border border-ink/10 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3">
-              <p className="text-sm">Tick rows, then save them into Leads.</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm">Edit a cell if it is wrong, then save the ticked rows into Leads.</p>
+                <SelectAllButton />
+              </div>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="readSites" />
                 Also read up to 4 public websites
@@ -116,31 +120,14 @@ export default async function DirectoryPage({
               <table className="w-full min-w-[860px] text-left text-sm">
                 <thead className="border-b border-ink/10 text-xs uppercase tracking-[0.12em] text-ink/45">
                   <tr>
-                    {["", "Name", "Address", "City", "Phone", "Email", "Website"].map((heading) => (
+                    {["", "Name", "Address", "City", "Phone", "Email", "Website", "Contact"].map((heading) => (
                       <th key={heading || "pick"} className="px-3 py-2 font-medium">{heading}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.id} className="border-b border-ink/5 align-top">
-                      <td className="px-3 py-3">
-                        <input type="checkbox" name="pick" value={row.id} />
-                        <input type="hidden" name="place" value={JSON.stringify(row)} />
-                      </td>
-                      <td className="min-w-40 px-3 py-3 font-medium">{row.business_name}</td>
-                      <td className="px-3 py-3 text-ink/70">{row.address || "—"}</td>
-                      <td className="whitespace-nowrap px-3 py-3">{[row.city, row.state].filter(Boolean).join(", ")}</td>
-                      <td className="whitespace-nowrap px-3 py-3 text-xs">{row.phones || "—"}</td>
-                      <td className="max-w-40 px-3 py-3 text-xs break-all">{row.emails || "—"}</td>
-                      <td className="max-w-36 px-3 py-3 text-xs">
-                        {row.website ? (
-                          <a className="block truncate text-moss" href={row.website} target="_blank" rel="noreferrer">
-                            {row.website.replace(/^https?:\/\//, "")}
-                          </a>
-                        ) : "—"}
-                      </td>
-                    </tr>
+                    <FindingRow key={row.id} place={row} />
                   ))}
                 </tbody>
               </table>

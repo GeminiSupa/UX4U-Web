@@ -290,6 +290,11 @@ export async function updateLead(form: FormData) {
   const { error } = await admin()
     .from("leads")
     .update({
+      business_name: text(form, "business_name"),
+      city: text(form, "city"),
+      website: text(form, "website"),
+      emails: text(form, "emails"),
+      phones: text(form, "phones"),
       contact_name: text(form, "contact_name"),
       current_pos: text(form, "current_pos"),
       contacted: text(form, "contacted") === "yes"

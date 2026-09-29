@@ -3,6 +3,8 @@ import { collectLeads, deleteLead, saveMapLeads, updateLead } from "@/lib/action
 import { control } from "@/lib/ui";
 import { SubmitButton } from "@/components/SubmitButton";
 import { getLeads, type Lead } from "@/lib/data";
+import { ContactLinks } from "@/components/ContactLinks";
+import { FindingRow, SelectAllButton } from "@/components/FindingRow";
 import { UseMyLocation } from "@/components/UseMyLocation";
 import { limitOf, mapCategories, radiusKmOf, searchMap, type MapPlace } from "@/lib/maps";
 
@@ -11,24 +13,6 @@ export const maxDuration = 60;
 
 function on(value: string | undefined) {
   return value === "1" || value === "on";
-}
-
-function phoneLines(value: string) {
-  return value.split(/[;,]/).map((item) => item.trim()).filter(Boolean);
-}
-
-function mailHref(lead: Lead) {
-  const address = lead.emails.split(/[;,]/).map((item) => item.trim()).find(Boolean);
-  if (!address) return "";
-  const subject = `Hello from UX4U — ${lead.business_name}`;
-  const body = [
-    "Hello,",
-    "",
-    `This is UX4U (info@ux4u.online), writing about ${lead.business_name}.`,
-    "",
-    "If this is not useful, reply with stop and we will not write again."
-  ].join("\n");
-  return `mailto:${address}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function matches(lead: Lead, find: string, hasEmail: boolean, hasPhone: boolean, hasSite: boolean, notContacted: boolean) {
@@ -188,7 +172,10 @@ export default async function LeadsPage({
       {places.length ? (
         <form action={saveMapLeads} className="mt-4 border border-ink/10 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3">
-            <p className="text-sm">{places.length} listings. Tick the ones to keep.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-sm">{places.length} listings. Edit a cell, then save the ticked rows.</p>
+              <SelectAllButton startSelected />
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="readSites" />
               Also read up to 4 public websites
@@ -198,30 +185,14 @@ export default async function LeadsPage({
             <table className="min-w-[760px] w-full text-left text-sm">
               <thead className="border-b border-ink/10 text-xs uppercase tracking-[0.12em] text-ink/45">
                 <tr>
-                  {["", "Business", "Phone", "Website", "City"].map((heading) => (
+                  {["", "Name", "Address", "City", "Phone", "Email", "Website", "Contact"].map((heading) => (
                     <th key={heading || "pick"} className="px-3 py-2 font-medium">{heading}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {places.map((place) => (
-                  <tr key={place.id} className="border-b border-ink/5 align-top">
-                    <td className="px-3 py-3">
-                      <input type="checkbox" name="pick" value={place.id} defaultChecked />
-                      <input type="hidden" name="place" value={JSON.stringify(place)} />
-                    </td>
-                    <td className="px-3 py-3">
-                      <p className="font-medium">{place.business_name}</p>
-                      <p className="text-xs text-ink/50">{place.category}{place.address ? ` · ${place.address}` : ""}</p>
-                    </td>
-                    <td className="px-3 py-3">{place.phones || "—"}</td>
-                    <td className="px-3 py-3">
-                      {place.website ? (
-                        <a className="text-moss" href={place.website} target="_blank" rel="noreferrer">{place.website.replace(/^https?:\/\//, "")}</a>
-                      ) : "—"}
-                    </td>
-                    <td className="px-3 py-3">{place.city}</td>
-                  </tr>
+                  <FindingRow key={place.id} place={place} checked />
                 ))}
               </tbody>
             </table>
@@ -304,24 +275,26 @@ export default async function LeadsPage({
               const formId = `lead-${lead.id}`;
               return (
                 <tr key={lead.id} className="border-b border-ink/5 align-top">
-                  <td className="min-w-40 px-3 py-3 font-medium">{lead.business_name || "Untitled"}</td>
-                  <td className="whitespace-nowrap px-3 py-3">{lead.city}</td>
-                  <td className="px-3 py-3">
+                  <td className="min-w-40 px-3 py-3">
                     <form id={formId} action={updateLead}>
                       <input type="hidden" name="id" value={lead.id} />
-                      <input className={control} name="contact_name" defaultValue={lead.contact_name} placeholder="Owner" />
+                      <input className={control} name="business_name" defaultValue={lead.business_name} placeholder="Name" />
                     </form>
                   </td>
-                  <td className="max-w-40 px-3 py-3 text-xs break-all">{lead.emails || "—"}</td>
-                  <td className="px-3 py-3 text-xs">
-                    {phoneLines(lead.phones).length ? phoneLines(lead.phones).map((phone) => (
-                      <span key={phone} className="block whitespace-nowrap">{phone}</span>
-                    )) : "—"}
+                  <td className="px-3 py-3">
+                    <input className={control} name="city" form={formId} defaultValue={lead.city} placeholder="City" />
                   </td>
-                  <td className="max-w-36 px-3 py-3 text-xs">
-                    {lead.website ? (
-                      <a className="block truncate text-moss" href={lead.website} target="_blank" rel="noreferrer">{lead.website.replace(/^https?:\/\//, "")}</a>
-                    ) : "—"}
+                  <td className="px-3 py-3">
+                    <input className={control} name="contact_name" form={formId} defaultValue={lead.contact_name} placeholder="Owner" />
+                  </td>
+                  <td className="px-3 py-3">
+                    <input className={control} name="emails" form={formId} defaultValue={lead.emails} placeholder="Email" />
+                  </td>
+                  <td className="px-3 py-3">
+                    <input className={control} name="phones" form={formId} defaultValue={lead.phones} placeholder="Phone" />
+                  </td>
+                  <td className="px-3 py-3">
+                    <input className={control} name="website" form={formId} defaultValue={lead.website} placeholder="Website" />
                   </td>
                   <td className="px-3 py-3">
                     <input className={control} name="current_pos" form={formId} defaultValue={lead.current_pos || ""} placeholder="Square, Toast..." />
@@ -333,11 +306,7 @@ export default async function LeadsPage({
                     </select>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
-                    {mailHref(lead) ? (
-                      <a className="block text-xs text-moss" href={mailHref(lead)}>Email</a>
-                    ) : (
-                      <span className="block text-xs text-ink/35">No email</span>
-                    )}
+                    <ContactLinks phones={lead.phones} emails={lead.emails} name={lead.business_name} />
                     <button className="mt-2 block text-xs text-moss" type="submit" form={formId}>Save</button>
                     <form action={deleteLead} className="mt-2">
                       <input type="hidden" name="id" value={lead.id} />
