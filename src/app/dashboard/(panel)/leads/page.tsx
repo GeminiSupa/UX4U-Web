@@ -3,13 +3,32 @@ import { collectLeads, deleteLead, saveMapLeads, updateLead } from "@/lib/action
 import { control } from "@/lib/ui";
 import { SubmitButton } from "@/components/SubmitButton";
 import { getLeads, type Lead } from "@/lib/data";
-import { mapCategories, searchMap, type MapPlace } from "@/lib/maps";
+import { UseMyLocation } from "@/components/UseMyLocation";
+import { limitOf, mapCategories, radiusKmOf, searchMap, type MapPlace } from "@/lib/maps";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 function on(value: string | undefined) {
   return value === "1" || value === "on";
+}
+
+function phoneLines(value: string) {
+  return value.split(/[;,]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function mailHref(lead: Lead) {
+  const address = lead.emails.split(/[;,]/).map((item) => item.trim()).find(Boolean);
+  if (!address) return "";
+  const subject = `Hello from UX4U — ${lead.business_name}`;
+  const body = [
+    "Hello,",
+    "",
+    `This is UX4U (info@ux4u.online), writing about ${lead.business_name}.`,
+    "",
+    "If this is not useful, reply with stop and we will not write again."
+  ].join("\n");
+  return `mailto:${address}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function matches(lead: Lead, find: string, hasEmail: boolean, hasPhone: boolean, hasSite: boolean, notContacted: boolean) {
@@ -40,13 +59,28 @@ export default async function LeadsPage({
   const hasPhone = on(query.hasPhone);
   const hasSite = on(query.hasSite);
   const notContacted = on(query.open);
+  const km = radiusKmOf(query.km);
+  const limit = limitOf(query.limit);
+  const lat = Number(query.lat);
+  const lon = Number(query.lon);
+  const nearMe = where === "Near me" && Number.isFinite(lat) && Number.isFinite(lon);
 
   let places: MapPlace[] = [];
   let mapNote = "";
   let mapError = "";
   if (where) {
     try {
-      const found = await searchMap({ category: what, city: where, keyword, needPhone, needWebsite: needSite });
+      const found = await searchMap({
+        category: what,
+        city: where,
+        keyword,
+        needPhone,
+        needWebsite: needSite,
+        radiusKm: km,
+        limit,
+        lat: nearMe ? lat : undefined,
+        lon: nearMe ? lon : undefined
+      });
       places = found.places;
       mapNote = found.note;
     } catch (error) {
@@ -63,7 +97,7 @@ export default async function LeadsPage({
         <div>
           <h1 className="font-serif text-4xl">Leads</h1>
           <p className="mt-2 max-w-xl text-sm text-ink/65">
-            Build a restaurant outreach list for a country, then track owner, current POS, and whether you have contacted them. Listings come from the public map and from pages the business has published.
+            Search a city or your current location, save the rows you want, then email the ones that published an address. This list is the lead record.
           </p>
         </div>
         <Link href="/dashboard/leads/export" className="rounded-full border border-ink/15 px-4 py-2 text-sm">
@@ -76,8 +110,14 @@ export default async function LeadsPage({
       {mapError ? <p className="mt-4 text-sm text-red-800">{mapError}</p> : null}
       {mapNote ? <p className="mt-4 text-sm text-ink/70">{mapNote}</p> : null}
 
-      <form method="get" className="mt-6 grid gap-3 border border-ink/10 bg-white p-4">
-        <div className="grid gap-3 md:grid-cols-3">
+      <form id="map-search" method="get" className="mt-6 grid gap-3 border border-ink/10 bg-white p-4">
+        {nearMe ? (
+          <>
+            <input type="hidden" name="lat" value={lat} />
+            <input type="hidden" name="lon" value={lon} />
+          </>
+        ) : null}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <label className="text-sm">
             Category
             <select className={control} name="what" defaultValue={what}>
@@ -88,14 +128,30 @@ export default async function LeadsPage({
           </label>
           <label className="text-sm">
             City
-            <input className={control} name="where" defaultValue={where} placeholder="California or Islamabad" />
+            <input className={control} name="where" defaultValue={where} placeholder="Melbourne, or a suburb" />
           </label>
           <label className="text-sm">
             Name contains
             <input className={control} name="keyword" defaultValue={keyword} placeholder="Optional" />
           </label>
+          <label className="text-sm">
+            Radius
+            <select className={control} name="km" defaultValue={String(km)}>
+              {[1, 2, 5, 10, 25].map((value) => (
+                <option key={value} value={value}>{value} km</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            Results
+            <select className={control} name="limit" defaultValue={String(limit)}>
+              {[25, 50, 80].map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </label>
         </div>
-        <div className="flex flex-wrap items-center gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" name="needPhone" value="1" defaultChecked={needPhone} />
             Has a phone
@@ -107,7 +163,11 @@ export default async function LeadsPage({
           <button className="rounded-full bg-ink px-4 py-2 text-sm text-paper" type="submit">
             Search map
           </button>
+          <UseMyLocation />
         </div>
+        <p className="text-xs leading-relaxed text-ink/55">
+          A city search starts at the centre. For the next batch, raise Results, widen the radius, or search a suburb such as Carlton. Use my location searches around this device, usually 5 km.
+        </p>
         <div className="flex flex-wrap gap-2 text-sm">
           {[
             ["Germany", "Germany"],
@@ -197,9 +257,13 @@ export default async function LeadsPage({
         {where ? <input type="hidden" name="where" value={where} /> : null}
         {what ? <input type="hidden" name="what" value={what} /> : null}
         {keyword ? <input type="hidden" name="keyword" value={keyword} /> : null}
+        <input type="hidden" name="km" value={km} />
+        <input type="hidden" name="limit" value={limit} />
+        {nearMe ? <input type="hidden" name="lat" value={lat} /> : null}
+        {nearMe ? <input type="hidden" name="lon" value={lon} /> : null}
         {needPhone ? <input type="hidden" name="needPhone" value="1" /> : null}
         {needSite ? <input type="hidden" name="needSite" value="1" /> : null}
-        <label className="text-sm">
+        <label className="w-full text-sm sm:w-64">
           Search saved
           <input className={control} name="find" defaultValue={query.find || ""} placeholder="Name, email, phone, city" />
         </label>
@@ -227,7 +291,7 @@ export default async function LeadsPage({
         {leads.length} saved rows, {withEmail} with an email.
       </p>
       <div className="mt-3 overflow-x-auto border border-ink/10 bg-white">
-        <table className="min-w-[1100px] w-full text-left text-sm">
+        <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="border-b border-ink/10 text-xs uppercase tracking-[0.12em] text-ink/45">
             <tr>
               {["Restaurant", "City", "Owner", "Email", "Phone", "Website", "Current POS", "Contacted", ""].map((heading) => (
@@ -240,32 +304,41 @@ export default async function LeadsPage({
               const formId = `lead-${lead.id}`;
               return (
                 <tr key={lead.id} className="border-b border-ink/5 align-top">
-                  <td className="px-3 py-3 font-medium">{lead.business_name || "Untitled"}</td>
-                  <td className="px-3 py-3">{lead.city}</td>
+                  <td className="min-w-40 px-3 py-3 font-medium">{lead.business_name || "Untitled"}</td>
+                  <td className="whitespace-nowrap px-3 py-3">{lead.city}</td>
                   <td className="px-3 py-3">
                     <form id={formId} action={updateLead}>
                       <input type="hidden" name="id" value={lead.id} />
                       <input className={control} name="contact_name" defaultValue={lead.contact_name} placeholder="Owner" />
                     </form>
                   </td>
-                  <td className="px-3 py-3 text-xs">{lead.emails || "—"}</td>
-                  <td className="px-3 py-3 text-xs">{lead.phones || "—"}</td>
+                  <td className="max-w-40 px-3 py-3 text-xs break-all">{lead.emails || "—"}</td>
                   <td className="px-3 py-3 text-xs">
+                    {phoneLines(lead.phones).length ? phoneLines(lead.phones).map((phone) => (
+                      <span key={phone} className="block whitespace-nowrap">{phone}</span>
+                    )) : "—"}
+                  </td>
+                  <td className="max-w-36 px-3 py-3 text-xs">
                     {lead.website ? (
-                      <a className="text-moss" href={lead.website} target="_blank" rel="noreferrer">{lead.website.replace(/^https?:\/\//, "")}</a>
+                      <a className="block truncate text-moss" href={lead.website} target="_blank" rel="noreferrer">{lead.website.replace(/^https?:\/\//, "")}</a>
                     ) : "—"}
                   </td>
                   <td className="px-3 py-3">
                     <input className={control} name="current_pos" form={formId} defaultValue={lead.current_pos || ""} placeholder="Square, Toast..." />
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="min-w-36 px-3 py-3">
                     <select className={control} name="contacted" form={formId} defaultValue={lead.contacted ? "yes" : "no"}>
-                      <option value="no">Not contacted</option>
+                      <option value="no">Not yet</option>
                       <option value="yes">Contacted</option>
                     </select>
                   </td>
-                  <td className="px-3 py-3">
-                    <button className="text-xs text-moss" type="submit" form={formId}>Save</button>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    {mailHref(lead) ? (
+                      <a className="block text-xs text-moss" href={mailHref(lead)}>Email</a>
+                    ) : (
+                      <span className="block text-xs text-ink/35">No email</span>
+                    )}
+                    <button className="mt-2 block text-xs text-moss" type="submit" form={formId}>Save</button>
                     <form action={deleteLead} className="mt-2">
                       <input type="hidden" name="id" value={lead.id} />
                       <button className="text-xs text-red-800" type="submit">Remove</button>

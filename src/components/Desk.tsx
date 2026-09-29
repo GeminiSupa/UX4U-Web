@@ -17,7 +17,7 @@ const links = [
 export function Desk({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   return (
-    <div className="min-h-screen bg-[#f6f4ef] text-ink lg:grid lg:grid-cols-[220px_1fr]">
+    <div className="min-h-screen bg-[#f6f4ef] text-ink lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
       <aside className="flex flex-col bg-ink text-paper lg:min-h-screen">
         <div className="px-5 py-5">
           <img src="/logo-on-dark.png" alt="UX4U" className="h-7 w-auto" />
@@ -53,7 +53,7 @@ export function Desk({ children }: { children: React.ReactNode }) {
           </form>
         </div>
       </aside>
-      <div className="px-5 py-6 lg:px-8">{children}</div>
+      <div className="min-w-0 px-4 py-6 sm:px-5 lg:px-8">{children}</div>
     </div>
   );
 }

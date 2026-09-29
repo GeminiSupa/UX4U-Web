@@ -189,25 +189,65 @@ const cityAnchors: [string, number, number][] = [
   ["Newcastle", -32.93, 151.78]
 ];
 
+const radiusChoices = [1, 2, 5, 10, 25];
+const limitChoices = [25, 50, 80];
+
+export function radiusKmOf(value: string | undefined) {
+  const radius = Number(value);
+  return radiusChoices.includes(radius) ? radius : 5;
+}
+
+export function limitOf(value: string | undefined) {
+  const limit = Number(value);
+  return limitChoices.includes(limit) ? limit : 25;
+}
+
 export async function searchMap(input: {
   category: string;
   city: string;
   keyword: string;
   needPhone: boolean;
   needWebsite: boolean;
+  radiusKm?: number;
+  limit?: number;
+  lat?: number;
+  lon?: number;
 }): Promise<{ places: MapPlace[]; note: string }> {
   const city = input.city.trim();
-  if (city.length < 2) throw new Error("Add a city or state to search.");
+  const nearMe =
+    Number.isFinite(input.lat) &&
+    Number.isFinite(input.lon) &&
+    (input.lat as number) >= -90 &&
+    (input.lat as number) <= 90 &&
+    (input.lon as number) >= -180 &&
+    (input.lon as number) <= 180;
+  if (!nearMe && city.length < 2) throw new Error("Add a city, or use your current location.");
   const chosen = categoryById(input.category);
-  const located = await locate(city);
-  const { points, note } = searchPoints(located);
+  const requestedRadius = radiusChoices.includes(input.radiusKm || 0) ? input.radiusKm || 5 : 5;
+  const requestedLimit = limitChoices.includes(input.limit || 0) ? input.limit || 25 : 25;
+  let points: PlacePoint[];
+  let note = "";
+  let radius = requestedRadius * 1000;
+  let limit = requestedLimit;
+  if (nearMe) {
+    points = [{ name: "Near me", lat: input.lat as number, lon: input.lon as number }];
+    note = `Within ${requestedRadius} km of your current location.`;
+  } else {
+    const located = await locate(city);
+    const found = searchPoints(located);
+    points = found.points;
+    note = found.note;
+    if (points.length > 1 && requestedRadius > 5) {
+      radius = 5000;
+      note = `${note} A country search stays at 5 km around each city so the free map can answer.`.trim();
+    }
+  }
   const keyword = input.keyword.trim().slice(0, 40);
   const nameFilter = keyword ? `["name"~"${escapeRegex(keyword)}",i]` : "";
-  const radius = points.length > 3 ? 2500 : 4000;
   const clauses = points
     .map((point) => `nwr${chosen.match}${nameFilter}(around:${radius},${point.lat},${point.lon});`)
     .join("");
-  const query = `[out:json][timeout:12];(${clauses});out tags center 24;`;
+  const query = `[out:json][timeout:18];(${clauses});out tags center ${limit};`;
   let payload: { elements?: OverpassElement[] } | null = null;
   let lastStatus = 0;
   for (const endpoint of overpassEndpoints) {
@@ -220,7 +260,7 @@ export async function searchMap(input: {
           Accept: "application/json"
         },
         body: `data=${encodeURIComponent(query)}`,
-        signal: AbortSignal.timeout(14000)
+        signal: AbortSignal.timeout(20000)
       });
       lastStatus = response.status;
       if (response.ok) {
@@ -272,7 +312,11 @@ export async function searchMap(input: {
       address: street,
       source_url: `https://www.openstreetmap.org/${element.type}/${element.id}`
     });
-    if (places.length >= 25) break;
+    if (places.length >= limit) break;
   }
-  return { places, note };
+  const reach = `${places.length} listing${places.length === 1 ? "" : "s"} within ${radius / 1000} km.`;
+  const more = places.length >= limit
+    ? " Raise the number of results, widen the radius, or search a suburb for the next batch."
+    : "";
+  return { places, note: [note, reach + more].filter(Boolean).join(" ") };
 }
