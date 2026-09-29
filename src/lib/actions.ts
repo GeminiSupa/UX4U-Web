@@ -280,8 +280,10 @@ export async function saveMapLeads(form: FormData) {
   }
   if (!rows.length) redirect("/dashboard/leads?error=Choose%20at%20least%20one%20listing");
   const { error } = await admin().from("leads").insert(rows);
-  if (error) redirect(`/dashboard/leads?error=${encodeURIComponent(error.message)}`);
-  redirect(`/dashboard/leads?saved=${rows.length}`);
+  const next = text(form, "next");
+  const dest = next.startsWith("/dashboard/") && !next.includes("//") ? next : "/dashboard/leads";
+  if (error) redirect(`${dest}${dest.includes("?") ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
+  redirect(`${dest}${dest.includes("?") ? "&" : "?"}saved=${rows.length}`);
 }
 
 export async function updateLead(form: FormData) {

@@ -22,6 +22,8 @@ export type MapPlace = {
   phones: string;
   emails: string;
   city: string;
+  state: string;
+  country: string;
   category: string;
   address: string;
   source_url: string;
@@ -50,6 +52,60 @@ function tag(tags: Record<string, string>, keys: string[]) {
     if (value) return value;
   }
   return "";
+}
+
+function placeFromElement(
+  element: OverpassElement,
+  chosen: (typeof mapCategories)[number],
+  fallbackCity: string
+): MapPlace | null {
+  const tags = element.tags || {};
+  const business_name = tag(tags, ["name", "brand"]);
+  if (!business_name || !element.type || !element.id) return null;
+  const phones = [tag(tags, ["phone", "contact:phone"]), tag(tags, ["mobile", "contact:mobile"])]
+    .filter(Boolean)
+    .join("; ");
+  const street = [tag(tags, ["addr:housenumber"]), tag(tags, ["addr:street"])].filter(Boolean).join(" ");
+  return {
+    id: `${element.type}/${element.id}`,
+    business_name: business_name.slice(0, 120),
+    website: websiteOf(tags),
+    phones,
+    emails: tag(tags, ["email", "contact:email"]).toLowerCase(),
+    city: tag(tags, ["addr:city", "addr:suburb"]) || fallbackCity,
+    state: tag(tags, ["addr:state"]),
+    country: tag(tags, ["addr:country"]),
+    category: chosen.label,
+    address: street,
+    source_url: `https://www.openstreetmap.org/${element.type}/${element.id}`
+  };
+}
+
+async function askOverpass(query: string) {
+  let lastStatus = 0;
+  for (const endpoint of overpassEndpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": USER_AGENT,
+          Accept: "application/json"
+        },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: AbortSignal.timeout(26000)
+      });
+      lastStatus = response.status;
+      if (response.ok) return (await response.json()) as { elements?: OverpassElement[] };
+      if (response.status !== 429 && response.status !== 504) break;
+    } catch {
+      lastStatus = 504;
+    }
+  }
+  if (lastStatus === 429 || lastStatus === 504) {
+    throw new Error("The free map service is busy. Wait a minute and search again.");
+  }
+  throw new Error("The map search did not answer. Try a smaller place, such as a suburb.");
 }
 
 function websiteOf(tags: Record<string, string>) {
@@ -93,8 +149,9 @@ async function locate(city: string) {
     throw new Error("No place matched that name. Add the country, such as Islamabad, Pakistan.");
   }
   const [south, north, west, east] = box;
-  const wide = north - south > 1.2 || east - west > 1.2 || ["state", "country"].includes(row?.addresstype || "");
-  return { lat, lon, south, north, west, east, wide, label: row?.name || city };
+  const kind = row?.addresstype || "";
+  const wide = north - south > 1.2 || east - west > 1.2 || ["state", "country"].includes(kind);
+  return { lat, lon, south, north, west, east, wide, kind, label: row?.name || city };
 }
 
 function searchPoints(place: Awaited<ReturnType<typeof locate>>): { points: PlacePoint[]; note: string } {
@@ -281,7 +338,6 @@ export async function searchMap(input: {
   const seen = new Set<string>();
   const places: MapPlace[] = [];
   for (const element of payload.elements || []) {
-    const tags = element.tags || {};
     const lat = element.lat ?? element.center?.lat;
     const lon = element.lon ?? element.center?.lon;
     const nearest = points.reduce((best, point) => {
@@ -289,29 +345,14 @@ export async function searchMap(input: {
       const distance = (point.lat - lat) ** 2 + (point.lon - lon) ** 2;
       return distance < best.distance ? { name: point.name, distance } : best;
     }, { name: city, distance: Infinity }).name;
-    const business_name = tag(tags, ["name", "brand"]);
-    if (!business_name || !element.type || !element.id) continue;
-    const phones = [tag(tags, ["phone", "contact:phone"]), tag(tags, ["mobile", "contact:mobile"])]
-      .filter(Boolean)
-      .join("; ");
-    const website = websiteOf(tags);
-    if (input.needPhone && !phones) continue;
-    if (input.needWebsite && !website) continue;
-    const key = `${business_name.toLowerCase()}|${phones}|${website}`;
+    const place = placeFromElement(element, chosen, nearest);
+    if (!place) continue;
+    if (input.needPhone && !place.phones) continue;
+    if (input.needWebsite && !place.website) continue;
+    const key = `${place.business_name.toLowerCase()}|${place.phones}|${place.website}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const street = [tag(tags, ["addr:housenumber"]), tag(tags, ["addr:street"])].filter(Boolean).join(" ");
-    places.push({
-      id: `${element.type}/${element.id}`,
-      business_name: business_name.slice(0, 120),
-      website,
-      phones,
-      emails: tag(tags, ["email", "contact:email"]).toLowerCase(),
-      city: tag(tags, ["addr:city"]) || nearest,
-      category: chosen.label,
-      address: street,
-      source_url: `https://www.openstreetmap.org/${element.type}/${element.id}`
-    });
+    places.push(place);
     if (places.length >= limit) break;
   }
   const reach = `${places.length} listing${places.length === 1 ? "" : "s"} within ${radius / 1000} km.`;
@@ -319,4 +360,37 @@ export async function searchMap(input: {
     ? " Raise the number of results, widen the radius, or search a suburb for the next batch."
     : "";
   return { places, note: [note, reach + more].filter(Boolean).join(" ") };
+}
+
+export async function searchDirectory(input: { category: string; place: string }) {
+  const place = input.place.trim();
+  if (place.length < 2) throw new Error("Add a city, such as Melbourne, Victoria.");
+  const located = await locate(place);
+  const span = Math.max(located.north - located.south, located.east - located.west);
+  if (["state", "country"].includes(located.kind) || span > 4) {
+    throw new Error("Name a city inside that area, such as Melbourne, Victoria. A whole state is too large for one list.");
+  }
+  const chosen = categoryById(input.category);
+  const south = located.south;
+  const west = located.west;
+  const north = located.north;
+  const east = located.east;
+  const query = `[out:json][timeout:25];(nwr${chosen.match}(${south},${west},${north},${east}););out tags center 250;`;
+  const payload = await askOverpass(query);
+  const seen = new Set<string>();
+  const places: MapPlace[] = [];
+  for (const element of payload.elements || []) {
+    const row = placeFromElement(element, chosen, located.label);
+    if (!row) continue;
+    const key = `${row.business_name.toLowerCase()}|${row.address}|${row.phones}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    places.push(row);
+    if (places.length >= 250) break;
+  }
+  places.sort((a, b) => a.business_name.localeCompare(b.business_name));
+  const note = places.length >= 250
+    ? `Showing 250 public listings inside ${located.label}. Search a suburb, such as Carlton, for the next slice.`
+    : `Public listings inside ${located.label}.`;
+  return { places, label: located.label, note };
 }

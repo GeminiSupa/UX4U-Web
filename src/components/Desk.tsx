@@ -10,6 +10,7 @@ const links = [
   ["/dashboard/projects", "Projects"],
   ["/dashboard/offers", "Offers"],
   ["/dashboard/posts", "Journal"],
+  ["/dashboard/directory", "Directory"],
   ["/dashboard/leads", "Leads"],
   ["/dashboard/inquiries", "Inquiries"]
 ];
