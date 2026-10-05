@@ -30,7 +30,7 @@ export function Footer() {
           <a className="block hover:underline" href="mailto:info@ux4u.online">
             info@ux4u.online
           </a>
-          {/* TODO(owner): WhatsApp number when approved for publication */}
+          {/* TODO(owner): WhatsApp via WHATSAPP in lib/site.ts */}
           {SOCIAL_PROFILES.length ? (
             <div className="mt-3 flex flex-col gap-1">
               {SOCIAL_PROFILES.map((url) => (

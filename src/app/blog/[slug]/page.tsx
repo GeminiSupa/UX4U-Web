@@ -1,10 +1,12 @@
+import { Footer } from "@/components/Footer";
+import { Header } from "@/components/Header";
+import { JsonLd } from "@/components/JsonLd";
+import { ensureSeed, getPost, getPosts } from "@/lib/data";
+import { pageMeta } from "@/lib/seo";
+import { POST_BYLINES, SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
-import { ensureSeed, getPost, getPosts } from "@/lib/data";
-import { pageMeta } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -76,16 +78,32 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   if (!post) notFound();
   const more = (await getPosts(true)).filter((item) => item.slug !== slug).slice(0, 2);
   const related = RELATED[slug];
-  // TODO(owner): author + publish date for byline and Article JSON-LD (T19).
+  const byline = POST_BYLINES[slug];
+  const article =
+    byline &&
+    ({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: post.title,
+      author: { "@type": "Person", name: byline.author },
+      datePublished: byline.date,
+      mainEntityOfPage: `${SITE_URL}/blog/${slug}`
+    } as Record<string, unknown>);
 
   return (
     <>
       <Header />
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-5 sm:py-14">
+        {article ? <JsonLd data={article} /> : null}
         <Link href="/blog" className="text-sm text-ink/50">
           Journal
         </Link>
         <h1 className="display mt-4 text-4xl sm:text-5xl">{post.title}</h1>
+        {byline ? (
+          <p className="mt-3 text-sm text-ink/55">
+            By {byline.author} · <time dateTime={byline.date}>{byline.date}</time>
+          </p>
+        ) : null}
         <p className="mt-6 text-lg text-ink/70">{post.excerpt}</p>
         <div className="mt-10 space-y-5 text-base leading-relaxed text-ink/85">
           {post.body.split(/\n\n+/).map((paragraph) => (

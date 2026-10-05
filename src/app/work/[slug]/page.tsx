@@ -6,9 +6,27 @@ import { JsonLd } from "@/components/JsonLd";
 import { hostLabel, lines, PROJECT_ORDER } from "@/lib/content";
 import { ensureSeed, getProject, getProjects } from "@/lib/data";
 import { pageMeta } from "@/lib/seo";
+import { getService } from "@/lib/services";
 import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
+
+function relatedServiceLinks(services: string) {
+  const hay = services.toLowerCase();
+  const picks: { slug: string; label: string }[] = [];
+  const add = (slug: string, label: string) => {
+    if (!picks.some((item) => item.slug === slug)) picks.push({ slug, label });
+  };
+  if (hay.includes("product") || hay.includes("full stack") || hay.includes("full-stack")) {
+    add("product-development", "Product development");
+  }
+  if (hay.includes("web") || hay.includes("design")) add("web-development", "Web development");
+  if (hay.includes("seo")) add("seo", "SEO");
+  if (hay.includes("meta") || hay.includes("marketing") || hay.includes("ads")) {
+    add("meta-ads", "Meta ads");
+  }
+  return picks.filter((item) => getService(item.slug)?.indexed);
+}
 
 export async function generateStaticParams() {
   return PROJECT_ORDER.map((slug) => ({ slug }));
@@ -38,6 +56,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
   if (!project) notFound();
 
   const related = (await getProjects(true)).filter((item) => item.slug !== slug).slice(0, 2);
+  const serviceLinks = relatedServiceLinks(project.services);
 
   const breadcrumb = {
     "@context": "https://schema.org",
@@ -138,9 +157,22 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
         </p>
 
         <div className="mt-12 flex flex-col gap-4 border-t border-ink/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/services" className="text-sm underline">
-            Related services
-          </Link>
+          <div className="text-sm">
+            <p className="text-xs uppercase tracking-[0.14em] text-ink/45">Related services</p>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              {serviceLinks.length ? (
+                serviceLinks.map((item) => (
+                  <Link key={item.slug} href={`/services/${item.slug}`} className="underline">
+                    {item.label}
+                  </Link>
+                ))
+              ) : (
+                <Link href="/services" className="underline">
+                  Services
+                </Link>
+              )}
+            </div>
+          </div>
           <Link href="/contact" className="rounded-full bg-ink px-5 py-3 text-center text-sm text-paper">
             Talk about a similar project
           </Link>

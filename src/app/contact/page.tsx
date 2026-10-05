@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sendInquiry } from "@/lib/actions";
 import { pageMeta } from "@/lib/seo";
+import { RESPONSE_TIME, WHATSAPP } from "@/lib/site";
 
 export const metadata = pageMeta({
   title: "Start a Project",
@@ -38,7 +39,8 @@ export default async function ContactPage({
             A concept, a half-built product, or a business that needs search, ads, and a cleaner operation.
             Write what you have. We reply from info@ux4u.online.
           </p>
-          {/* TODO(owner): confirmed response-time promise, e.g. "We reply within one working day." */}
+          {/* TODO(owner): confirmed response-time promise via RESPONSE_TIME in lib/site.ts */}
+          {RESPONSE_TIME ? <p className="mt-4 text-sm text-ink/70">{RESPONSE_TIME}</p> : null}
           <dl className="mt-8 space-y-4 text-sm">
             <div>
               <dt className="text-ink/45">Email</dt>
@@ -48,7 +50,16 @@ export default async function ContactPage({
                 </a>
               </dd>
             </div>
-            {/* TODO(owner): WhatsApp number when approved for publication */}
+            {WHATSAPP ? (
+              <div>
+                <dt className="text-ink/45">WhatsApp</dt>
+                <dd>
+                  <a className="underline" href={`https://wa.me/${WHATSAPP.replace(/\D/g, "")}`}>
+                    WhatsApp: {WHATSAPP}
+                  </a>
+                </dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-ink/45">Studio</dt>
               <dd>Islamabad</dd>
@@ -70,6 +81,7 @@ export default async function ContactPage({
           {query.sent ? (
             <p className="text-lg">
               Thanks. We have your message and will reply from info@ux4u.online.
+              {RESPONSE_TIME ? ` ${RESPONSE_TIME}` : ""}
             </p>
           ) : (
             <form action={sendInquiry} className="grid gap-4">
