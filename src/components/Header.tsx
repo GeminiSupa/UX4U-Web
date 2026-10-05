@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const links = [
+  ["Services", "/services"],
   ["Work", "/work"],
-  ["Journal", "/blog"],
-  ["Contact", "/contact"]
+  ["Journal", "/blog"]
 ];
 
 export function Header() {

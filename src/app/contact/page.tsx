@@ -1,12 +1,24 @@
-import type { Metadata } from "next";
+import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sendInquiry } from "@/lib/actions";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Contact" };
+export const metadata = pageMeta({
+  title: "Start a Project",
+  description:
+    "Tell UX4U what you are building. Share a concept, a half-built product, or a business that needs search, ads and automation. We reply from info@ux4u.online.",
+  path: "/contact"
+});
 
 const field = "mt-2 w-full border border-ink/15 bg-white/70 px-3 py-3 text-sm";
+
+const relatedWork = [
+  ["RestroManage", "/work/restromanage"],
+  ["Vakeel Diary", "/work/vakeel-diary"],
+  ["UniMondo", "/work/unimondo"]
+];
 
 export default async function ContactPage({
   searchParams
@@ -26,6 +38,7 @@ export default async function ContactPage({
             A concept, a half-built product, or a business that needs search, ads, and a cleaner operation.
             Write what you have. We reply from info@ux4u.online.
           </p>
+          {/* TODO(owner): confirmed response-time promise, e.g. "We reply within one working day." */}
           <dl className="mt-8 space-y-4 text-sm">
             <div>
               <dt className="text-ink/45">Email</dt>
@@ -35,15 +48,29 @@ export default async function ContactPage({
                 </a>
               </dd>
             </div>
+            {/* TODO(owner): WhatsApp number when approved for publication */}
             <div>
               <dt className="text-ink/45">Studio</dt>
               <dd>Islamabad</dd>
             </div>
           </dl>
+          <p className="mt-8 text-sm text-ink/70">
+            See related work:{" "}
+            {relatedWork.map(([label, href], index) => (
+              <span key={href}>
+                {index > 0 ? ", " : ""}
+                <Link href={href} className="underline">
+                  {label}
+                </Link>
+              </span>
+            ))}
+          </p>
         </div>
         <div className="border border-ink/10 bg-white/50 p-5 sm:p-8">
           {query.sent ? (
-            <p className="text-lg">Received. We will reply at the address you gave.</p>
+            <p className="text-lg">
+              Thanks. We have your message and will reply from info@ux4u.online.
+            </p>
           ) : (
             <form action={sendInquiry} className="grid gap-4">
               {query.error ? (

@@ -1,11 +1,16 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { ensureSeed, getPosts } from "@/lib/data";
+import { pageMeta } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Journal" };
+export const metadata = pageMeta({
+  title: "Journal: How We Think About the Work",
+  description:
+    "Short notes from the UX4U studio on launching products, building lead lists and turning a concept into a business that runs.",
+  path: "/blog"
+});
 
 export default async function BlogPage() {
   await ensureSeed().catch(() => false);

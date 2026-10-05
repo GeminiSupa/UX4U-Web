@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
@@ -6,6 +7,18 @@ import { hostLabel, lines, method, services } from "@/lib/content";
 import { ensureSeed, getOffers, getPosts, getProjects, getTeam } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "UX4U",
+    title: "UX4U | Software and Growth Studio in Islamabad",
+    description:
+      "From a concept to a business that runs. Product software, web development, SEO, lead generation and automation from Islamabad.",
+    url: "/"
+  }
+};
 
 export default async function HomePage() {
   await ensureSeed().catch(() => false);
@@ -22,7 +35,7 @@ export default async function HomePage() {
       <main>
         <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-10 pt-10 sm:px-5 sm:pt-14 lg:grid-cols-[1.4fr_0.8fr] lg:gap-12 lg:pt-20">
           <div className="hero-rise">
-            <p className="text-xs uppercase tracking-[0.22em] text-moss">Islamabad studio</p>
+            <p className="text-xs uppercase tracking-[0.22em] text-moss">Software and growth studio · Islamabad</p>
             <h1 className="display mt-4 max-w-4xl text-4xl text-ink sm:mt-5 sm:text-6xl lg:text-7xl">
               From a concept to a business that runs.
             </h1>
@@ -30,11 +43,11 @@ export default async function HomePage() {
               UX4U designs and builds the product, then stays for the part that makes it a company:
               the website, the search, the ads, the leads, and the automations your team uses on a Tuesday.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link href="/contact" className="rounded-full bg-ink px-5 py-3 text-center text-sm text-paper">
                 Tell us what you are building
               </Link>
-              <Link href="/work" className="rounded-full border border-ink/15 px-5 py-3 text-center text-sm">
+              <Link href="/work" className="text-center text-sm text-ink/80 underline-offset-4 hover:underline">
                 See the work
               </Link>
             </div>
@@ -89,14 +102,18 @@ export default async function HomePage() {
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
             {projects.slice(0, 3).map((project, position) => (
               <Reveal key={project.id} delay={position * 90}>
-              <a
-                href={project.url}
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href={`/work/${project.slug}`}
                 className="work-card group flex min-h-64 flex-col justify-between overflow-hidden border border-ink/10 bg-white/60 shadow-[0_18px_40px_-32px_rgba(22,24,21,0.7)] transition hover:-translate-y-1"
               >
                 {project.image_url ? (
-                  <img src={project.image_url} alt="" className="h-44 w-full object-cover object-top" />
+                  <img
+                    src={project.image_url}
+                    alt={project.image_alt}
+                    width={800}
+                    height={450}
+                    className="h-44 w-full object-cover object-top"
+                  />
                 ) : null}
                 <div className="flex flex-1 flex-col justify-between p-5">
                 <div>
@@ -106,7 +123,7 @@ export default async function HomePage() {
                 </div>
                 <p className="mt-6 text-xs uppercase tracking-[0.14em] text-moss">{project.services}</p>
                 </div>
-              </a>
+              </Link>
               </Reveal>
             ))}
           </div>
@@ -148,7 +165,11 @@ export default async function HomePage() {
                 <Reveal key={person.id} delay={position * 70}>
                 <article className="flex gap-4 border border-ink/10 bg-paper p-4 transition hover:-translate-y-0.5 sm:p-5">
                   {person.photo_url ? (
-                    <img src={person.photo_url} alt="" className="h-20 w-20 shrink-0 rounded-full object-cover" />
+                    <img
+                      src={person.photo_url}
+                      alt={`${person.name}, ${person.role}`}
+                      className="h-20 w-20 shrink-0 rounded-full object-cover"
+                    />
                   ) : (
                     <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-ink font-serif text-2xl text-lime">
                       {person.name.slice(0, 1)}
@@ -158,6 +179,16 @@ export default async function HomePage() {
                     <p className="font-serif text-2xl">{person.name}</p>
                     <p className="mt-1 text-sm text-moss">{person.role}</p>
                     <p className="mt-3 text-sm leading-relaxed text-ink/70">{person.bio}</p>
+                    {person.profile_url ? (
+                      <a
+                        href={person.profile_url}
+                        className="mt-3 inline-block text-sm underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Profile
+                      </a>
+                    ) : null}
                   </div>
                 </article>
                 </Reveal>

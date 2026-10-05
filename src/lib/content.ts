@@ -4,21 +4,87 @@ export type TeamMember = {
   role: string;
   bio: string;
   photo_url: string;
+  /** TODO(owner): public profile URL when available */
+  profile_url?: string;
   sort_order: number;
   published: boolean;
 };
 
+export type ProjectResult =
+  | { metric: string; date: string; method: string }
+  | "confidential";
+
 export type Project = {
   id: string;
   name: string;
+  slug: string;
   url: string;
   summary: string;
   features: string;
   services: string;
   image_url: string;
+  image_alt: string;
+  /** TODO(owner): verified challenge / result / quote only */
+  challenge?: string;
+  result?: ProjectResult;
+  quote?: { text: string; name: string; role: string };
   sort_order: number;
   published: boolean;
 };
+
+/** Default public work order (peptides after the others). */
+export const PROJECT_ORDER = [
+  "restromanage",
+  "vakeel-diary",
+  "unimondo",
+  "usa-peptide-depot",
+  "peptide-costa-rica",
+  "battle-born"
+] as const;
+
+const SLUG_BY_NAME: Record<string, string> = {
+  RestroManage: "restromanage",
+  UniMondo: "unimondo",
+  "USA Peptide Depot": "usa-peptide-depot",
+  "Peptide Costa Rica": "peptide-costa-rica",
+  "Vakeel Diary": "vakeel-diary",
+  "Battle Born Peptide": "battle-born"
+};
+
+export function projectSlug(name: string, url = "") {
+  if (SLUG_BY_NAME[name]) return SLUG_BY_NAME[name];
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    if (host.includes("restromanage")) return "restromanage";
+    if (host.includes("unimondo")) return "unimondo";
+    if (host.includes("usapeptidedepot")) return "usa-peptide-depot";
+    if (host.includes("peptidecostarica")) return "peptide-costa-rica";
+    if (host.includes("vakeeldiary")) return "vakeel-diary";
+    if (host.includes("battleborn")) return "battle-born";
+  } catch {
+    /* ignore */
+  }
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function sortProjects<T extends { name: string; url?: string; slug?: string; sort_order?: number }>(
+  projects: T[]
+) {
+  const rank = new Map(PROJECT_ORDER.map((slug, index) => [slug, index]));
+  return [...projects].sort((a, b) => {
+    const aSlug = a.slug || projectSlug(a.name, a.url || "");
+    const bSlug = b.slug || projectSlug(b.name, b.url || "");
+    const aRank = rank.get(aSlug as (typeof PROJECT_ORDER)[number]);
+    const bRank = rank.get(bSlug as (typeof PROJECT_ORDER)[number]);
+    if (aRank !== undefined || bRank !== undefined) {
+      return (aRank ?? 999) - (bRank ?? 999);
+    }
+    return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  });
+}
 
 export type Offer = {
   id: string;
@@ -98,6 +164,7 @@ export const seedProjects: Project[] = [
   {
     id: "seed-restro",
     name: "RestroManage",
+    slug: "restromanage",
     url: "https://restromanage.com",
     summary: "Restaurant operations on the phones and tablets a venue already owns. No POS terminal to buy.",
     features: [
@@ -112,61 +179,15 @@ export const seedProjects: Project[] = [
     ].join("\n"),
     services: "Product, full stack, SEO",
     image_url: "/work/restromanage.jpg",
+    image_alt:
+      "RestroManage homepage: restaurant interior behind a tablet showing a floor plan, new order for table 7, and ticket list",
     sort_order: 1,
-    published: true
-  },
-  {
-    id: "seed-uni",
-    name: "UniMondo",
-    url: "https://unimondo.uk",
-    summary: "A study-in-Europe consultancy, from the first call through admissions and visa-ready departure.",
-    features: [
-      "Country and university shortlists",
-      "Program pages with deadlines and tuition bands",
-      "A staged application journey a student can follow",
-      "Intake that carries GPA and IELTS into the file",
-      "Counselor-led pages instead of a generic brochure"
-    ].join("\n"),
-    services: "Web, design, marketing",
-    image_url: "/work/unimondo.jpg",
-    sort_order: 2,
-    published: true
-  },
-  {
-    id: "seed-usa",
-    name: "USA Peptide Depot",
-    url: "https://usapeptidedepot.com",
-    summary: "A research-catalogue storefront with lot paperwork, domestic shipping, and a checkout that stays in its lane.",
-    features: [
-      "Product catalogue with lot-specific documentation",
-      "Research-use notices kept visible",
-      "US fulfillment, tracking, and a free-shipping threshold",
-      "A reconstitution calculator for laboratory volumes",
-      "Account, order, and support paths"
-    ].join("\n"),
-    services: "Web, full stack, SEO",
-    image_url: "/work/usa-peptide-depot.jpg",
-    sort_order: 3,
-    published: true
-  },
-  {
-    id: "seed-cr",
-    name: "Peptide Costa Rica",
-    url: "https://peptidecostarica.net",
-    summary: "A regional storefront for the same kind of catalogue, written and shipped for Costa Rica.",
-    features: [
-      "Local catalogue and product pages",
-      "Checkout and shipping for that market",
-      "Brand and page structure separate from the US store"
-    ].join("\n"),
-    services: "Web, design",
-    image_url: "/work/peptide-costa-rica.jpg",
-    sort_order: 4,
     published: true
   },
   {
     id: "seed-vakeel",
     name: "Vakeel Diary",
+    slug: "vakeel-diary",
     url: "https://vakeeldiary.com",
     summary: "Practice management for Pakistani advocates. Cases, hearings, and fees in one place instead of a paper diary.",
     features: [
@@ -178,12 +199,73 @@ export const seedProjects: Project[] = [
     ].join("\n"),
     services: "Product, full stack, design",
     image_url: "/work/vakeel-diary.jpg",
+    image_alt:
+      "Vakeel Diary homepage: laptop on a desk showing a dark dashboard with hearing calendar, matters, and PKR invoices",
+    sort_order: 2,
+    published: true
+  },
+  {
+    id: "seed-uni",
+    name: "UniMondo",
+    slug: "unimondo",
+    url: "https://unimondo.uk",
+    summary: "A study-in-Europe consultancy, from the first call through admissions and visa-ready departure.",
+    features: [
+      "Country and university shortlists",
+      "Program pages with deadlines and tuition bands",
+      "A staged application journey a student can follow",
+      "Intake that carries GPA and IELTS into the file",
+      "Counselor-led pages instead of a generic brochure"
+    ].join("\n"),
+    services: "Web, design, marketing",
+    image_url: "/work/unimondo.jpg",
+    image_alt:
+      "UniMondo homepage: university courtyard photo under the headline Your future knows no borders and a Get Started button",
+    sort_order: 3,
+    published: true
+  },
+  {
+    id: "seed-usa",
+    name: "USA Peptide Depot",
+    slug: "usa-peptide-depot",
+    url: "https://usapeptidedepot.com",
+    summary: "A research-catalogue storefront with lot paperwork, domestic shipping, and a checkout that stays in its lane.",
+    features: [
+      "Product catalogue with lot-specific documentation",
+      "Research-use notices kept visible",
+      "US fulfillment, tracking, and a free-shipping threshold",
+      "A reconstitution calculator for laboratory volumes",
+      "Account, order, and support paths"
+    ].join("\n"),
+    services: "Web, full stack, SEO",
+    image_url: "/work/usa-peptide-depot.jpg",
+    image_alt:
+      "USA Peptide Depot homepage: Research catalogue. Domestic shipping. headline beside a cluster of frosted vials",
+    sort_order: 4,
+    published: true
+  },
+  {
+    id: "seed-cr",
+    name: "Peptide Costa Rica",
+    slug: "peptide-costa-rica",
+    url: "https://peptidecostarica.net",
+    summary: "A regional storefront for the same kind of catalogue, written and shipped for Costa Rica.",
+    features: [
+      "Local catalogue and product pages",
+      "Checkout and shipping for that market",
+      "Brand and page structure separate from the US store"
+    ].join("\n"),
+    services: "Web, design",
+    image_url: "/work/peptide-costa-rica.jpg",
+    image_alt:
+      "Peptide Costa Rica homepage: tropical hillside building over water with the headline A catalogue written for Costa Rica",
     sort_order: 5,
     published: true
   },
   {
     id: "seed-bb",
     name: "Battle Born Peptide",
+    slug: "battle-born",
     url: "https://battlebornpeptide.com",
     summary: "Another branded catalogue and checkout, with its own name, offer, and product pages.",
     features: [
@@ -193,6 +275,8 @@ export const seedProjects: Project[] = [
     ].join("\n"),
     services: "Web, marketing",
     image_url: "/work/battle-born.jpg",
+    image_alt:
+      "Battle Born Peptide homepage: desert dusk landscape with a black pump bottle and the headline Built for the high desert",
     sort_order: 6,
     published: true
   }

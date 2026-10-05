@@ -1,9 +1,11 @@
 import "server-only";
 import {
+  projectSlug,
   seedOffers,
   seedPosts,
   seedProjects,
   seedTeam,
+  sortProjects,
   type Offer,
   type Post,
   type Project,
@@ -24,13 +26,29 @@ function mapTeam(row: Record<string, unknown>): TeamMember {
     role: asText(row.role),
     bio: asText(row.bio),
     photo_url: asText(row.photo_url),
+    profile_url: asText(row.profile_url) || undefined,
     sort_order: Number(row.sort_order) || 0,
     published: Boolean(row.published)
   };
 }
 
-function mapProject(row: Record<string, unknown>): Project {
+function enrichProject(partial: Omit<Project, "slug" | "image_alt"> & { slug?: string; image_alt?: string }): Project {
+  const seed = seedProjects.find(
+    (item) => item.name === partial.name || item.url === partial.url || item.slug === partial.slug
+  );
+  const slug = partial.slug || seed?.slug || projectSlug(partial.name, partial.url);
   return {
+    ...partial,
+    slug,
+    image_alt: partial.image_alt || seed?.image_alt || `${partial.name} homepage`,
+    challenge: partial.challenge ?? seed?.challenge,
+    result: partial.result ?? seed?.result,
+    quote: partial.quote ?? seed?.quote
+  };
+}
+
+function mapProject(row: Record<string, unknown>): Project {
+  return enrichProject({
     id: String(row.id),
     name: asText(row.name),
     url: asText(row.url),
@@ -40,7 +58,7 @@ function mapProject(row: Record<string, unknown>): Project {
     image_url: asText(row.image_url),
     sort_order: Number(row.sort_order) || 0,
     published: Boolean(row.published)
-  };
+  });
 }
 
 function mapOffer(row: Record<string, unknown>): Offer {
@@ -114,9 +132,12 @@ export async function ensureSeed() {
   if (settings.data?.seeded) return true;
 
   const withoutId = <T extends { id: string }>(rows: T[]) => rows.map(({ id: _id, ...row }) => row);
+  const projectRows = seedProjects.map(
+    ({ id: _id, slug: _slug, image_alt: _alt, challenge: _c, result: _r, quote: _q, ...row }) => row
+  );
   const problems = await Promise.all([
     fillIfEmpty("team_members", withoutId(seedTeam)),
-    fillIfEmpty("projects", withoutId(seedProjects)),
+    fillIfEmpty("projects", projectRows),
     fillIfEmpty("offers", withoutId(seedOffers)),
     fillIfEmpty("posts", withoutId(seedPosts))
   ]);
@@ -132,7 +153,13 @@ export async function getTeam(publishedOnly = true) {
 
 export async function getProjects(publishedOnly = true) {
   const result = await readTable("projects", mapProject, seedProjects, publishedOnly);
-  return result.ready ? result.rows : seedProjects;
+  const rows = result.ready ? result.rows.map((row) => enrichProject(row)) : seedProjects;
+  return sortProjects(rows);
+}
+
+export async function getProject(slug: string) {
+  const projects = await getProjects(true);
+  return projects.find((project) => project.slug === slug) || null;
 }
 
 export async function getOffers(publishedOnly = true) {
