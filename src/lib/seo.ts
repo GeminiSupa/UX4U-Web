@@ -21,8 +21,17 @@ export function pageMeta({
     title, // layout title.template appends " | UX4U"
     description,
     alternates: { canonical: path },
-    openGraph: { type, siteName: SITE_NAME, title: fullTitle, description, url: path },
+    openGraph: {
+      type,
+      locale: "en_US",
+      siteName: SITE_NAME,
+      title: fullTitle,
+      description,
+      url: path
+    },
     twitter: { card: "summary_large_image", title: fullTitle, description },
-    ...(noindex ? { robots: { index: false, follow: true } } : {})
+    robots: noindex
+      ? { index: false, follow: true }
+      : { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } }
   };
 }

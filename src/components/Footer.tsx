@@ -13,12 +13,13 @@ const nav = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-ink/10">
+    <footer className="border-t border-ink/10 bg-white/25 backdrop-blur-sm">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:flex-row sm:items-end sm:justify-between sm:px-5 sm:py-10">
         <div>
           <img src="/logo.png" alt="UX4U" className="h-8 w-auto" />
           <p className="mt-3 max-w-sm text-sm text-ink/70">
-            Software, search, marketing, and the operations that keep a business running after the launch.
+            Software, search, marketing, and the operations that keep a business running after the launch. Product
+            design, web development, SEO and automation from Islamabad.
           </p>
           <nav className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
             {nav.map(([label, href]) => (

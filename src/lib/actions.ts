@@ -195,20 +195,27 @@ export async function deletePost(form: FormData) {
   redirect("/dashboard/posts");
 }
 
+function safeNextPath(raw: string) {
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("://")) return "/contact?sent=1";
+  return raw;
+}
+
 export async function sendInquiry(form: FormData) {
+  const next = safeNextPath(text(form, "next") || "/contact?sent=1");
+  const fail = next.includes("?") ? `${next.split("?")[0]}?error=1` : "/contact?error=1";
   const row = {
     name: text(form, "name"),
     email: text(form, "email"),
     company: text(form, "company"),
-    service: text(form, "service"),
+    service: text(form, "service") || "Concept to launch",
     message: text(form, "message")
   };
   if (row.name.length < 2 || !row.email.includes("@") || row.message.length < 2) {
-    redirect("/contact?error=1");
+    redirect(fail);
   }
   const { error } = await admin().from("inquiries").insert(row);
-  if (error) redirect("/contact?error=1");
-  redirect("/contact?sent=1");
+  if (error) redirect(fail);
+  redirect(next.includes("sent=") ? next : next.includes("?") ? `${next}&sent=1` : `${next}?sent=1`);
 }
 
 export async function collectLeads(form: FormData) {

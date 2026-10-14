@@ -34,14 +34,41 @@ export const metadata: Metadata = {
   },
   description:
     "UX4U is an Islamabad studio that builds your product and website, then runs the search, ads and automations that bring in customers.",
+  keywords: [
+    "UX4U",
+    "web development Islamabad",
+    "product software Pakistan",
+    "SEO Islamabad",
+    "lead generation agency",
+    "Meta ads Pakistan",
+    "business automation",
+    "growth studio"
+  ],
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "technology",
   openGraph: {
     type: "website",
+    locale: "en_US",
     siteName: SITE_NAME,
     title: "UX4U | Software and Growth Studio in Islamabad",
     description:
-      "From a concept to a business that runs. Product software, web development, SEO, lead generation and automation from Islamabad."
+      "From a concept to a business that runs. Product software, web development, SEO, lead generation and automation from Islamabad.",
+    url: SITE_URL
   },
-  twitter: { card: "summary_large_image" }
+  twitter: {
+    card: "summary_large_image",
+    title: "UX4U | Software and Growth Studio in Islamabad",
+    description:
+      "Product software, web development, SEO, lead generation and automation from Islamabad."
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 }
+  },
+  alternates: { canonical: "/" }
 };
 
 const organization = {

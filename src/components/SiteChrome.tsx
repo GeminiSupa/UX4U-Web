@@ -1,5 +1,6 @@
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { LeadCapture } from "@/components/LeadCapture";
 import { MarqueeBanner } from "@/components/MarqueeBanner";
 import type { ReactNode } from "react";
 
@@ -12,6 +13,7 @@ export function SiteChrome({ children, footer = true }: { children: ReactNode; f
       </div>
       {children}
       {footer ? <Footer /> : null}
+      <LeadCapture />
     </>
   );
 }

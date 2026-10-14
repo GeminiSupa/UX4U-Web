@@ -28,14 +28,18 @@ export function Reveal({
           observer.unobserve(node);
         }
       },
-      { threshold: 0.08, rootMargin: "0px 0px -8% 0px" }
+      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" }
     );
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
 
   return (
-    <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`reveal ${visible ? "reveal-in" : ""} ${className}`}>
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`reveal ${visible ? "reveal-in" : ""} ${className}`}
+    >
       {children}
     </div>
   );

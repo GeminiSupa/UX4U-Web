@@ -72,7 +72,7 @@ export default async function ContactPage({
             ))}
           </p>
         </div>
-        <div className="border border-ink/10 bg-white/50 p-5 sm:p-8">
+        <div className="glass-panel rounded-2xl p-5 sm:p-8">
           {query.sent ? (
             <p className="text-lg">
               Thanks. We have your message and will reply from info@ux4u.online.

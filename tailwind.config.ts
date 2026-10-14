@@ -5,18 +5,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: "#efeae1",
-        ink: "#161815",
-        moss: "#1c6b4a",
-        lime: "#d7f26a",
-        line: "#d9d2c6"
+        paper: "#eef1f4",
+        ink: "#0b1210",
+        moss: "#0f7a56",
+        lime: "#c8f04a",
+        cyan: "#1aa6a0",
+        line: "#cfd6de"
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui"],
         serif: ["var(--font-serif)", "ui-serif", "Georgia"]
       },
       boxShadow: {
-        card: "0 1px 0 rgba(22,24,21,0.06)"
+        card: "0 1px 0 rgba(11,18,16,0.06)",
+        lift: "0 18px 40px -28px rgba(11, 18, 16, 0.45)"
+      },
+      borderRadius: {
+        card: "1rem"
       }
     }
   },

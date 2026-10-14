@@ -19,18 +19,18 @@ export function Header() {
   }, [path]);
 
   return (
-    <header className="border-b border-ink/10 bg-paper/90 backdrop-blur">
+    <header className="border-b border-ink/10 bg-paper/80 shadow-[0_8px_30px_-20px_rgba(11,18,16,0.35)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
         <Link href="/" className="shrink-0" aria-label="UX4U">
           <img src="/logo.png" alt="" className="h-7 w-auto sm:h-8" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm sm:flex">
           {links.map(([label, href]) => (
-            <Link key={href} href={href} className="text-ink/70 hover:text-ink">
+            <Link key={href} href={href} className="text-ink/70 transition hover:text-ink">
               {label}
             </Link>
           ))}
-          <Link href="/contact" className="rounded-full bg-ink px-4 py-2 text-paper">
+          <Link href="/contact" className="rounded-full bg-ink px-4 py-2 text-paper transition hover:bg-ink/90">
             Start a project
           </Link>
         </nav>
