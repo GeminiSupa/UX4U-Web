@@ -10,3 +10,6 @@
 | 6 | Per-project challenge / result / quote | Empty (case studies stay noindex until filled) |
 | 7 | Team photos / profile URLs | Upload in Dashboard → Team |
 | 8 | Work order | Done — peptides after RestroManage, Vakeel Diary, UniMondo |
+| 9 | Enable Vercel Web Analytics in the Vercel project dashboard | Required for live visit charts |
+| 10 | Company registration number / full legal name if different from UX4U | Optional — add to Terms/Privacy when ready |
+| 11 | Lawyer review of Terms + Privacy | Recommended before heavy product marketing |

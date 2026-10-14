@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteChrome } from "@/components/SiteChrome";
 import { hostLabel, lines, PROJECT_ORDER } from "@/lib/content";
 import { ensureSeed, getProject, getProjects } from "@/lib/data";
 import { pageMeta } from "@/lib/seo";
@@ -78,8 +77,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
   };
 
   return (
-    <>
-      <Header />
+    <SiteChrome>
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-5 sm:py-14">
         <JsonLd data={breadcrumb} />
         <p className="text-sm text-ink/50">
@@ -189,7 +187,6 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
           </div>
         ) : null}
       </main>
-      <Footer />
-    </>
+    </SiteChrome>
   );
 }

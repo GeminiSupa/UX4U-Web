@@ -10,6 +10,8 @@ const paths = [
   "/blog",
   "/contact",
   "/services",
+  "/privacy",
+  "/terms",
   "/blog/launch-is-the-start",
   "/blog/what-a-lead-list-is-for",
   "/blog/concept-is-not-a-business",

@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { SiteChrome } from "@/components/SiteChrome";
 import { SubmitButton } from "@/components/SubmitButton";
+import { WhatsAppLink } from "@/components/WhatsAppButton";
 import { sendInquiry } from "@/lib/actions";
 import { pageMeta } from "@/lib/seo";
-import { WhatsAppLink } from "@/components/WhatsAppButton";
 import { RESPONSE_TIME } from "@/lib/site";
 
 export const metadata = pageMeta({
@@ -31,8 +30,7 @@ export default async function ContactPage({
   const query = await searchParams;
 
   return (
-    <>
-      <Header />
+    <SiteChrome>
       <main className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-5 sm:py-14 lg:grid-cols-[0.8fr_1.1fr] lg:gap-12">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-moss">Contact</p>
@@ -59,7 +57,7 @@ export default async function ContactPage({
             </div>
             <div>
               <dt className="text-ink/45">Studio</dt>
-              <dd>Islamabad</dd>
+              <dd>Islamabad, Pakistan (registered)</dd>
             </div>
           </dl>
           <p className="mt-8 text-sm leading-relaxed text-ink/70">
@@ -115,12 +113,22 @@ export default async function ContactPage({
                 The situation
                 <textarea className={field} name="message" rows={6} required placeholder="What exists today, and what should be running in three months." />
               </label>
+              <p className="text-xs leading-relaxed text-ink/55">
+                By sending, you agree to our{" "}
+                <Link href="/privacy" className="underline">
+                  Privacy Policy
+                </Link>{" "}
+                and{" "}
+                <Link href="/terms" className="underline">
+                  Terms
+                </Link>
+                .
+              </p>
               <SubmitButton label="Send" pendingLabel="Sending" dark />
             </form>
           )}
         </div>
       </main>
-      <Footer />
-    </>
+    </SiteChrome>
   );
 }

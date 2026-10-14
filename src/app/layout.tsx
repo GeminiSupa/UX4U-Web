@@ -1,8 +1,18 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, Instrument_Serif } from "next/font/google";
+import { CookieConsent } from "@/components/CookieConsent";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { WhatsAppFab } from "@/components/WhatsAppButton";
-import { SITE_NAME, SITE_URL, SOCIAL_PROFILES, WHATSAPP } from "@/lib/site";
+import {
+  COMPANY_CITY,
+  COMPANY_COUNTRY,
+  COMPANY_EMAIL,
+  SITE_NAME,
+  SITE_URL,
+  SOCIAL_PROFILES,
+  WHATSAPP
+} from "@/lib/site";
 import "./globals.css";
 
 const sans = Instrument_Sans({
@@ -40,9 +50,14 @@ const organization = {
   name: "UX4U",
   url: SITE_URL,
   logo: `${SITE_URL}/logo.png`,
-  email: "info@ux4u.online",
+  email: COMPANY_EMAIL,
   ...(WHATSAPP ? { telephone: `+${WHATSAPP.replace(/\D/g, "")}` } : {}),
-  address: { "@type": "PostalAddress", addressLocality: "Islamabad", addressCountry: "PK" },
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: COMPANY_CITY,
+    addressCountry: "PK",
+    addressRegion: COMPANY_COUNTRY
+  },
   ...(SOCIAL_PROFILES.length ? { sameAs: SOCIAL_PROFILES } : {})
 };
 
@@ -61,6 +76,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={website} />
         {children}
         <WhatsAppFab />
+        <CookieConsent />
+        <SiteAnalytics />
       </body>
     </html>
   );

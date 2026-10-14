@@ -1,5 +1,4 @@
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { SiteChrome } from "@/components/SiteChrome";
 import { hostLabel, lines } from "@/lib/content";
 import { ensureSeed, getProjects } from "@/lib/data";
 import { pageMeta } from "@/lib/seo";
@@ -18,8 +17,7 @@ export default async function WorkPage() {
   const projects = await getProjects(true);
 
   return (
-    <>
-      <Header />
+    <SiteChrome>
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14">
         <p className="text-xs uppercase tracking-[0.22em] text-moss">Projects</p>
         <h1 className="display mt-4 max-w-3xl text-4xl sm:text-6xl">Products and sites we have taken to market.</h1>
@@ -76,7 +74,6 @@ export default async function WorkPage() {
           ))}
         </div>
       </main>
-      <Footer />
-    </>
+    </SiteChrome>
   );
 }

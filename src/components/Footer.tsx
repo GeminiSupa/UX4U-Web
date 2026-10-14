@@ -6,7 +6,9 @@ const nav = [
   ["Projects", "/work"],
   ["Journal", "/blog"],
   ["Services", "/services"],
-  ["Contact", "/contact"]
+  ["Contact", "/contact"],
+  ["Privacy", "/privacy"],
+  ["Terms", "/terms"]
 ];
 
 export function Footer() {
@@ -25,7 +27,7 @@ export function Footer() {
               </Link>
             ))}
           </nav>
-          <p className="mt-3 text-sm text-ink/60">Islamabad, Pakistan</p>
+          <p className="mt-3 text-sm text-ink/60">Registered in Islamabad, Pakistan</p>
         </div>
         <div className="space-y-2 text-sm">
           <a className="block hover:underline" href="mailto:info@ux4u.online">

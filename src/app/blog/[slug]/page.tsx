@@ -1,6 +1,5 @@
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteChrome } from "@/components/SiteChrome";
 import { ensureSeed, getPost, getPosts } from "@/lib/data";
 import { pageMeta } from "@/lib/seo";
 import { POST_BYLINES, SITE_URL } from "@/lib/site";
@@ -91,8 +90,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
     } as Record<string, unknown>);
 
   return (
-    <>
-      <Header />
+    <SiteChrome>
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-5 sm:py-14">
         {article ? <JsonLd data={article} /> : null}
         <Link href="/blog" className="text-sm text-ink/50">
@@ -138,7 +136,6 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           </div>
         ) : null}
       </main>
-      <Footer />
-    </>
+    </SiteChrome>
   );
 }

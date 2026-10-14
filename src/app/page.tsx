@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { Reveal } from "@/components/Reveal";
+import { SiteChrome } from "@/components/SiteChrome";
 import { hostLabel, lines, method, services } from "@/lib/content";
 import { ensureSeed, getOffers, getPosts, getProjects, getTeam } from "@/lib/data";
 
@@ -30,12 +29,11 @@ export default async function HomePage() {
   ]);
 
   return (
-    <>
-      <Header />
+    <SiteChrome>
       <main>
         <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-10 pt-10 sm:px-5 sm:pt-14 lg:grid-cols-[1.4fr_0.8fr] lg:gap-12 lg:pt-20">
           <div className="hero-rise">
-            <p className="text-xs uppercase tracking-[0.22em] text-moss">Software and growth studio · Islamabad</p>
+            <p className="text-xs uppercase tracking-[0.22em] text-moss">Software and growth studio · Islamabad, Pakistan</p>
             <h1 className="display mt-4 max-w-4xl text-4xl text-ink sm:mt-5 sm:text-6xl lg:text-7xl">
               From a concept to a business that runs.
             </h1>
@@ -67,16 +65,6 @@ export default async function HomePage() {
             </p>
           </aside>
         </section>
-
-        <div className="overflow-hidden border-y border-ink/10 bg-lime/70 py-3">
-          <div className="marquee-track flex w-max gap-10 px-6 text-xs uppercase tracking-[0.22em]">
-            {[...services, ...services].map(([name], index) => (
-              <span key={`${name}-${index}`} className="shrink-0">
-                {name}
-              </span>
-            ))}
-          </div>
-        </div>
 
         <section className="border-y border-ink/10 bg-ink text-paper">
           <div className="mx-auto grid max-w-6xl gap-px bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
@@ -228,7 +216,6 @@ export default async function HomePage() {
           </div>
         </section>
       </main>
-      <Footer />
-    </>
+    </SiteChrome>
   );
 }

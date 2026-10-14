@@ -19,7 +19,7 @@ export function Header() {
   }, [path]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/90 backdrop-blur">
+    <header className="border-b border-ink/10 bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
         <Link href="/" className="shrink-0" aria-label="UX4U">
           <img src="/logo.png" alt="" className="h-7 w-auto sm:h-8" />
