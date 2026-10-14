@@ -48,7 +48,7 @@ export default async function HomePage() {
                 Tell us what you are building
               </Link>
               <Link href="/work" className="text-center text-sm text-ink/80 underline-offset-4 hover:underline">
-                See the work
+                See the projects
               </Link>
             </div>
           </div>
@@ -94,7 +94,7 @@ export default async function HomePage() {
 
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16">
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="font-serif text-3xl sm:text-5xl">Selected work</h2>
+            <h2 className="font-serif text-3xl sm:text-5xl">Selected projects</h2>
             <Link href="/work" className="text-sm underline">
               All projects
             </Link>

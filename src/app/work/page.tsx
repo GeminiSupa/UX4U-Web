@@ -7,9 +7,9 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const metadata = pageMeta({
-  title: "Work: Products and Sites We Have Taken to Market",
+  title: "Projects: Products and Sites We Have Taken to Market",
   description:
-    "Six live products and sites built or grown by UX4U: restaurant software, a legal practice app, a study-abroad consultancy and online stores.",
+    "Live products and sites built or grown by UX4U: restaurant software, a legal practice app, a study-abroad consultancy and USA Peptide Depot.",
   path: "/work"
 });
 
@@ -21,10 +21,10 @@ export default async function WorkPage() {
     <>
       <Header />
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14">
-        <p className="text-xs uppercase tracking-[0.22em] text-moss">Work</p>
+        <p className="text-xs uppercase tracking-[0.22em] text-moss">Projects</p>
         <h1 className="display mt-4 max-w-3xl text-4xl sm:text-6xl">Products and sites we have taken to market.</h1>
         <p className="mt-6 max-w-2xl text-lg text-ink/70">
-          A sample of live work, with the homepage of each product.
+          A sample of live projects, including USA Peptide Depot and the other storefronts and products we ship.
         </p>
         <div className="mt-12 space-y-6">
           {projects.map((project, index) => (

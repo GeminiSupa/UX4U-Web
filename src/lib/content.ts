@@ -228,19 +228,20 @@ export const seedProjects: Project[] = [
     id: "seed-usa",
     name: "USA Peptide Depot",
     slug: "usa-peptide-depot",
-    url: "https://usapeptidedepot.com",
-    summary: "A research-catalogue storefront with lot paperwork, domestic shipping, and a checkout that stays in its lane.",
+    url: "https://www.usapeptidedepot.com",
+    summary:
+      "HPLC-tested research peptides shipped from the USA, with lot paperwork, domestic fulfillment, and a reconstitution calculator.",
     features: [
-      "Product catalogue with lot-specific documentation",
-      "Research-use notices kept visible",
-      "US fulfillment, tracking, and a free-shipping threshold",
+      "Product catalogue with independent HPLC testing where available",
+      "Lot-specific chromatograms on the product pages",
+      "US fulfillment, tracking, and free shipping over $100",
       "A reconstitution calculator for laboratory volumes",
       "Account, order, and support paths"
     ].join("\n"),
     services: "Web, full stack, SEO",
     image_url: "/work/usa-peptide-depot.jpg",
     image_alt:
-      "USA Peptide Depot homepage: Research catalogue. Domestic shipping. headline beside a cluster of frosted vials",
+      "USA Peptide Depot homepage: research catalogue headline beside a cluster of frosted vials",
     sort_order: 4,
     published: true
   },

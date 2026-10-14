@@ -65,7 +65,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
       {
         "@type": "ListItem",
         position: 1,
-        name: "Work",
+        name: "Projects",
         item: `${SITE_URL}/work`
       },
       {
@@ -84,7 +84,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
         <JsonLd data={breadcrumb} />
         <p className="text-sm text-ink/50">
           <Link href="/work" className="hover:underline">
-            Work
+            Projects
           </Link>
           {" / "}
           {project.name}
@@ -180,7 +180,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
 
         {related.length ? (
           <div className="mt-12 border-t border-ink/10 pt-6">
-            <p className="text-xs uppercase tracking-[0.16em] text-ink/45">More work</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-ink/45">More projects</p>
             {related.map((item) => (
               <Link key={item.id} href={`/work/${item.slug}`} className="mt-3 block font-serif text-2xl hover:underline">
                 {item.name}

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { JsonLd } from "@/components/JsonLd";
-import { SITE_NAME, SITE_URL, SOCIAL_PROFILES } from "@/lib/site";
+import { WhatsAppFab } from "@/components/WhatsAppButton";
+import { SITE_NAME, SITE_URL, SOCIAL_PROFILES, WHATSAPP } from "@/lib/site";
 import "./globals.css";
 
 const sans = Instrument_Sans({
@@ -40,6 +41,7 @@ const organization = {
   url: SITE_URL,
   logo: `${SITE_URL}/logo.png`,
   email: "info@ux4u.online",
+  ...(WHATSAPP ? { telephone: `+${WHATSAPP.replace(/\D/g, "")}` } : {}),
   address: { "@type": "PostalAddress", addressLocality: "Islamabad", addressCountry: "PK" },
   ...(SOCIAL_PROFILES.length ? { sameAs: SOCIAL_PROFILES } : {})
 };
@@ -58,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={organization} />
         <JsonLd data={website} />
         {children}
+        <WhatsAppFab />
       </body>
     </html>
   );

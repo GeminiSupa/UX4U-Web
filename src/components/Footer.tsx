@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { WhatsAppLink } from "@/components/WhatsAppButton";
 import { SOCIAL_PROFILES } from "@/lib/site";
 
 const nav = [
-  ["Work", "/work"],
+  ["Projects", "/work"],
   ["Journal", "/blog"],
   ["Services", "/services"],
   ["Contact", "/contact"]
@@ -11,7 +12,7 @@ const nav = [
 export function Footer() {
   return (
     <footer className="border-t border-ink/10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:flex-row sm:items-end sm:justify-between sm:px-5 sm:py-10">
         <div>
           <img src="/logo.png" alt="UX4U" className="h-8 w-auto" />
           <p className="mt-3 max-w-sm text-sm text-ink/70">
@@ -26,11 +27,11 @@ export function Footer() {
           </nav>
           <p className="mt-3 text-sm text-ink/60">Islamabad, Pakistan</p>
         </div>
-        <div className="text-sm">
+        <div className="space-y-2 text-sm">
           <a className="block hover:underline" href="mailto:info@ux4u.online">
             info@ux4u.online
           </a>
-          {/* TODO(owner): WhatsApp via WHATSAPP in lib/site.ts */}
+          <WhatsAppLink className="text-ink/80 hover:text-ink" />
           {SOCIAL_PROFILES.length ? (
             <div className="mt-3 flex flex-col gap-1">
               {SOCIAL_PROFILES.map((url) => (

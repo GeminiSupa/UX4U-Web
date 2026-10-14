@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 const links = [
   ["Services", "/services"],
-  ["Work", "/work"],
+  ["Projects", "/work"],
   ["Journal", "/blog"]
 ];
 
