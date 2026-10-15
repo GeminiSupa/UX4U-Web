@@ -8,7 +8,8 @@ const nav = [
   ["Services", "/services"],
   ["Contact", "/contact"],
   ["Privacy", "/privacy"],
-  ["Terms", "/terms"]
+  ["Terms", "/terms"],
+  ["Admin", "/dashboard/login"]
 ];
 
 export function Footer() {
