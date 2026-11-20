@@ -46,26 +46,30 @@ async function run<T>(task: string, work: () => Promise<T>): Promise<Ok<T>> {
 const aiBlockSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["type", "text", "level", "items", "question", "answer"],
+  required: ["type", "text", "level", "style", "items", "question", "answer", "label", "url"],
   properties: {
-    type: { type: "string", enum: ["heading", "paragraph", "list", "quote", "callout", "faq"] },
-    text: { type: "string", description: "Heading, paragraph, quote or callout text. Paragraphs may use **bold**, *italic* and [text](url)." },
+    type: { type: "string", enum: ["heading", "paragraph", "list", "quote", "callout", "faq", "button"] },
+    text: { type: "string", description: "Heading, paragraph, quote or callout text. Use **bold**, *italic* and [descriptive link text](/site-path) where helpful. Never paste a raw URL." },
     level: { type: "integer", enum: [2, 3], description: "Heading level; 2 for other types." },
+    style: { type: "string", enum: ["bullet", "number"], description: "List style; bullet for non-list blocks." },
     items: { type: "array", items: { type: "string" }, description: "List items; empty for other types." },
     question: { type: "string", description: "FAQ question; empty for other types." },
-    answer: { type: "string", description: "FAQ answer; empty for other types." }
+    answer: { type: "string", description: "FAQ answer; empty for other types." },
+    label: { type: "string", description: "Button label; empty for other types." },
+    url: { type: "string", description: "Site-relative button URL; empty for other types." }
   }
 };
 
-type AiBlock = { type: string; text: string; level: number; items: string[]; question: string; answer: string };
+type AiBlock = { type: string; text: string; level: number; style: string; items: string[]; question: string; answer: string; label: string; url: string };
 
 function toBlocks(items: AiBlock[]): Block[] {
   return cleanBlocks(
     items.map((item) => {
-      if (item.type === "list") return { type: "list", style: "bullet", items: item.items };
+      if (item.type === "list") return { type: "list", style: item.style === "number" ? "number" : "bullet", items: item.items };
       if (item.type === "faq") return { type: "faq", question: item.question, answer: item.answer };
       if (item.type === "heading") return { type: "heading", level: item.level, text: item.text };
       if (item.type === "quote") return { type: "quote", text: item.text, cite: "" };
+      if (item.type === "button") return { type: "button", label: item.label, url: item.url };
       return { type: item.type, text: item.text };
     })
   );
@@ -85,7 +89,7 @@ export async function aiDraftPost(input: { brief: string; keyword: string; audie
   return run<Draft>("draft a post", async () => {
     const words = { short: 600, standard: 1100, long: 1800 }[input.length] || 1100;
     const result = await askAiJson<Omit<Draft, "blocks"> & { blocks: AiBlock[] }>({
-      instructions: `${VOICE}\nReturn a complete blog post as structured blocks. Aim for about ${words} words. Start with a 40 to 80 word paragraph that directly answers the main question. Use 3 to 6 H2 sections, at least two phrased as questions, one list, one callout with the key takeaway, and 3 to 5 FAQ blocks at the end. Include one internal link to a relevant UX4U page using site paths such as /services/web-development, /services/seo, /services/product-development, /services/lead-generation, /services/business-automation or /contact.`,
+      instructions: `${VOICE}\nReturn a complete blog post as structured blocks. Aim for about ${words} words. Never put numbered steps inside a paragraph: every sequence of steps must be a list block with style "number" and one clean item per array entry. Start with a 40 to 80 word paragraph that directly answers the main question. Use 3 to 6 H2 sections, at least two phrased as questions, one numbered list, one bullet list, one callout with the key takeaway, and 3 to 5 FAQ blocks at the end. Add 2 to 4 contextual internal links inside paragraphs using exact Markdown syntax such as [web development services](/services/web-development). Use descriptive anchor text, site-relative paths, and never show a raw URL in prose. Finish with a button block labelled "Start a project" linking to /contact.`,
       input: `Brief: ${input.brief.slice(0, 3000)}\nFocus keyword: ${input.keyword.slice(0, 120) || "(choose the best one)"}\nReader: ${input.audience.slice(0, 300) || "small and mid-size business owners"}`,
       schemaName: "blog_post",
       maxOutputTokens: 9000,

@@ -117,16 +117,61 @@ export function cleanBlocks(raw: unknown): Block[] {
         break;
     }
   }
-  return out;
+  return normalizeBlocks(out);
+}
+
+function splitParagraph(block: Extract<Block, { type: "paragraph" }>): Block[] {
+  const text = block.text.trim();
+  if (!text) return [block];
+
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length >= 2) {
+    const numbered = lines.map((line) => line.match(/^(\d{1,2})[.)]\s+(.+)$/));
+    if (numbered.every(Boolean) && numbered.every((match, index) => Number(match?.[1]) === index + 1)) {
+      return [{ id: block.id, type: "list", style: "number", items: numbered.map((match) => match?.[2] || "") }];
+    }
+    const bullets = lines.map((line) => line.match(/^[-•]\s+(.+)$/));
+    if (bullets.every(Boolean)) {
+      return [{ id: block.id, type: "list", style: "bullet", items: bullets.map((match) => match?.[1] || "") }];
+    }
+  }
+
+  const markers = Array.from(text.matchAll(/(^|\s)(\d{1,2})[.)]\s+(?=[A-Z])/g));
+  const sequential = markers.length >= 2 && markers.every((match, index) => Number(match[2]) === index + 1);
+  if (!sequential) return [block];
+
+  const first = markers[0];
+  const lead = text.slice(0, first.index).trim();
+  const items = markers.map((marker, index) => {
+    const start = (marker.index || 0) + marker[0].length;
+    const end = index + 1 < markers.length ? markers[index + 1].index : text.length;
+    return text.slice(start, end).trim();
+  }).filter(Boolean);
+  if (items.length < 2) return [block];
+
+  return [
+    ...(lead ? [{ id: block.id, type: "paragraph" as const, text: lead }] : []),
+    { id: blockId(), type: "list" as const, style: "number" as const, items }
+  ];
+}
+
+/** Repairs pasted or AI-written paragraphs that contain list syntax. */
+export function normalizeBlocks(blocks: Block[]) {
+  return blocks.flatMap((block) => (block.type === "paragraph" ? splitParagraph(block) : [block]));
 }
 
 /** Older posts store plain text with blank lines between paragraphs. */
 export function blocksFromBody(body: string): Block[] {
-  return body
+  const blocks = body
     .split(/\n\n+/)
     .map((text) => text.trim())
     .filter(Boolean)
-    .map((text) => ({ id: blockId(), type: "paragraph" as const, text }));
+    .map((text) => {
+      const heading = text.match(/^(#{2,3})\s+(.+)$/);
+      if (heading) return { id: blockId(), type: "heading" as const, level: heading[1].length === 3 ? 3 as const : 2 as const, text: heading[2] };
+      return { id: blockId(), type: "paragraph" as const, text };
+    });
+  return normalizeBlocks(blocks);
 }
 
 /** Plain text version (used for the legacy body column, word counts and AI prompts). */
@@ -160,19 +205,35 @@ export type Inline =
   | { kind: "italic"; text: string }
   | { kind: "link"; text: string; url: string };
 
-/** Parses **bold**, *italic* and [text](url). Unsafe link targets render as plain text. */
+function bareLinkLabel(url: string) {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/$/, "")}`;
+  } catch {
+    return url;
+  }
+}
+
+/** Parses emphasis, Markdown links and bare web addresses. Unsafe targets render as plain text. */
 export function parseInline(text: string): Inline[] {
   const out: Inline[] = [];
-  const pattern = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)\s]+)\)/g;
+  const pattern = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)\s]+)\)|\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s<>()]+)/g;
   let last = 0;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text))) {
     if (match.index > last) out.push({ kind: "text", text: text.slice(last, match.index) });
     if (match[1] !== undefined) out.push({ kind: "bold", text: match[1] });
     else if (match[2] !== undefined) out.push({ kind: "italic", text: match[2] });
-    else {
+    else if (match[3] !== undefined) {
       const url = safeUrl(match[4]);
       out.push(url ? { kind: "link", text: match[3], url } : { kind: "text", text: match[3] });
+    } else {
+      const raw = match[5] || match[6] || "";
+      const trailing = raw.match(/[.,!?;:]+$/)?.[0] || "";
+      const candidate = trailing ? raw.slice(0, -trailing.length) : raw;
+      const url = safeUrl(candidate);
+      out.push(url ? { kind: "link", text: bareLinkLabel(url), url } : { kind: "text", text: raw });
+      if (trailing) out.push({ kind: "text", text: trailing });
     }
     last = pattern.lastIndex;
   }

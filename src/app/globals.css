@@ -216,6 +216,33 @@ select:focus {
   animation: float 8s ease-in-out infinite;
 }
 
+/* —— Journal article —— */
+.journal-hero {
+  background:
+    radial-gradient(560px 300px at 92% 0%, rgba(200, 240, 74, 0.34), transparent 64%),
+    radial-gradient(520px 320px at 0% 100%, rgba(26, 166, 160, 0.18), transparent 68%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(234, 241, 239, 0.72));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.journal-hero::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background-image: radial-gradient(rgba(15, 122, 86, 0.48) 0.75px, transparent 0.75px);
+  background-size: 18px 18px;
+  mask-image: linear-gradient(110deg, transparent 12%, #000 72%, transparent);
+}
+
+.article-prose > p:first-child {
+  color: rgba(11, 18, 16, 0.9);
+  font-size: 1.18em;
+  line-height: 1.8;
+}
+
 /* —— Lead capture modal —— */
 .lead-overlay {
   position: fixed;
