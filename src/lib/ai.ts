@@ -6,7 +6,8 @@ import "server-only";
  */
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
-export const DEFAULT_MODEL = "gemini-3.8-flash";
+export const DEFAULT_MODEL = "gemini-3.5-flash-lite";
+const SEARCH_MODEL = "gemini-3.8-flash";
 
 export type Citation = { url: string; title: string };
 export type AiResult = { text: string; citations: Citation[] };
@@ -18,6 +19,24 @@ export function aiConfigured() {
 }
 
 export class AiError extends Error {}
+
+function modelCandidates(webSearch: boolean) {
+  const configured = process.env.GEMINI_MODEL?.trim();
+  const defaults = webSearch ? [SEARCH_MODEL, DEFAULT_MODEL] : [DEFAULT_MODEL, SEARCH_MODEL];
+  return Array.from(new Set([configured, ...defaults].filter((model): model is string => Boolean(model))));
+}
+
+function errorMessage(json: Record<string, unknown>, status: number) {
+  const error = json.error as { message?: string } | undefined;
+  return error?.message || `HTTP ${status}`;
+}
+
+function finalError(status: number, message: string) {
+  if (status === 401 || status === 403) return new AiError(`Gemini rejected the API key: ${message}`);
+  if (status === 429) return new AiError("Gemini quota is exhausted. Check the API key's rate limits or billing, then try again.");
+  if (status >= 500) return new AiError("Gemini is temporarily busy. Try again in a minute.");
+  return new AiError(`Gemini request failed: ${message}`);
+}
 
 export async function askAi({
   instructions,
@@ -40,7 +59,6 @@ export async function askAi({
   if (!key) throw new AiError("Add GEMINI_API_KEY to the server environment to use AI features.");
 
   const body: Record<string, unknown> = {
-    model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
     system_instruction: instructions,
     input,
     store: false,
@@ -52,28 +70,39 @@ export async function askAi({
   // Kept in the public options for compatibility with existing callers. Gemini schemas are unnamed.
   void schemaName;
 
-  let response: Response;
-  try {
-    response = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: {
-        "x-goog-api-key": key,
-        "Content-Type": "application/json",
-        "Api-Revision": "2026-05-20"
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-      cache: "no-store"
-    });
-  } catch {
-    throw new AiError("The AI service did not answer in time. Try again.");
+  let lastStatus = 503;
+  let lastMessage = "The service did not answer in time.";
+  const attemptTimeout = Math.min(timeoutMs, 45000);
+
+  for (const model of modelCandidates(webSearch)) {
+    let response: Response;
+    try {
+      response = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": key,
+          "Content-Type": "application/json",
+          "Api-Revision": "2026-05-20"
+        },
+        body: JSON.stringify({ ...body, model }),
+        signal: AbortSignal.timeout(attemptTimeout),
+        cache: "no-store"
+      });
+    } catch {
+      lastStatus = 503;
+      lastMessage = "The service did not answer in time.";
+      continue;
+    }
+
+    const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (response.ok) return readOutput(json);
+
+    lastStatus = response.status;
+    lastMessage = errorMessage(json, response.status);
+    if (response.status === 401 || response.status === 403) break;
   }
-  const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok) {
-    const message = (json.error as { message?: string } | undefined)?.message || `HTTP ${response.status}`;
-    throw new AiError(`AI request failed: ${message}`);
-  }
-  return readOutput(json);
+
+  throw finalError(lastStatus, lastMessage);
 }
 
 /** Pulls text and URL citations out of a raw Gemini Interactions API payload. */
