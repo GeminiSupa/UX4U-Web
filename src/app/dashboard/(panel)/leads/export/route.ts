@@ -1,3 +1,4 @@
+import { requireArea } from "@/lib/auth";
 import { getLeads } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ function cell(value: string) {
 }
 
 export async function GET() {
+  await requireArea("leads", "view");
   const leads = await getLeads();
   const header = ["Restaurant", "City", "Owner", "Email", "Phone", "Website", "Current POS", "Contacted"];
   const lines = [

@@ -80,8 +80,21 @@ function mapPost(row: Record<string, unknown>): Post {
     excerpt: asText(row.excerpt),
     body: asText(row.body),
     published: Boolean(row.published),
-    created_at: asText(row.created_at)
+    created_at: asText(row.created_at),
+    blocks: row.blocks ?? undefined,
+    cover_url: asText(row.cover_url),
+    seo_title: asText(row.seo_title),
+    seo_description: asText(row.seo_description),
+    focus_keyword: asText(row.focus_keyword),
+    author_name: asText(row.author_name),
+    publish_at: row.publish_at ? asText(row.publish_at) : null,
+    updated_at: asText(row.updated_at) || asText(row.created_at)
   };
+}
+
+/** Live on the site: published and its scheduled time has passed. */
+export function isLive(post: Post, now = Date.now()) {
+  return post.published && (!post.publish_at || Date.parse(post.publish_at) <= now);
 }
 
 async function readTable<T>(
@@ -169,12 +182,22 @@ export async function getOffers(publishedOnly = true) {
 
 export async function getPosts(publishedOnly = true) {
   const result = await readTable("posts", mapPost, seedPosts, publishedOnly);
-  return result.ready ? result.rows : seedPosts;
+  const rows = result.ready ? result.rows : seedPosts;
+  if (!publishedOnly) return rows;
+  return rows
+    .filter((post) => isLive(post))
+    .sort((a, b) => Date.parse(b.publish_at || b.created_at) - Date.parse(a.publish_at || a.created_at));
 }
 
 export async function getPost(slug: string) {
   const posts = await getPosts(true);
   return posts.find((post) => post.slug === slug) || null;
+}
+
+export async function getPostById(id: string) {
+  const { data, error } = await admin().from("posts").select("*").eq("id", id).maybeSingle();
+  if (error || !data) return null;
+  return mapPost(data);
 }
 
 export type Inquiry = {

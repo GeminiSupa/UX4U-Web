@@ -1,3 +1,5 @@
+import { canSaveDirectoryRows } from "@/lib/access";
+import { requireArea } from "@/lib/auth";
 import Link from "next/link";
 import { saveMapLeads } from "@/lib/actions";
 import { control } from "@/lib/ui";
@@ -28,6 +30,8 @@ export default async function DirectoryPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  const user = await requireArea("directory", "view");
+  const canSave = canSaveDirectoryRows(user);
   const query = await searchParams;
   const what = query.what || "restaurant";
   const place = query.place || "";
@@ -105,6 +109,8 @@ export default async function DirectoryPage({
             <Stat label="Website" count={withSite} total={rows.length} />
           </div>
 
+          {!canSave ? <p className="mt-6 text-sm text-ink/60">Saving rows needs edit access to Leads.</p> : null}
+          <fieldset disabled={!canSave} className="m-0 min-w-0 border-0 p-0">
           <form action={saveMapLeads} className="mt-6 border border-ink/10 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3">
               <div className="flex flex-wrap items-center gap-3">
@@ -137,6 +143,7 @@ export default async function DirectoryPage({
               <Link href="/dashboard/leads" className="text-sm underline">Open Leads</Link>
             </div>
           </form>
+          </fieldset>
         </>
       ) : place && !error ? (
         <p className="mt-6 text-sm text-ink/60">No public listings matched that city and category.</p>

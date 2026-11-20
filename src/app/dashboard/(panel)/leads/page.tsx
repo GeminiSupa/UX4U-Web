@@ -1,3 +1,6 @@
+import { can } from "@/lib/access";
+import { requireArea } from "@/lib/auth";
+import { ViewOnly } from "@/components/ViewOnly";
 import Link from "next/link";
 import { collectLeads, deleteLead, saveMapLeads, updateLead } from "@/lib/actions";
 import { control } from "@/lib/ui";
@@ -32,6 +35,8 @@ export default async function LeadsPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  const user = await requireArea("leads", "view");
+  const canEdit = can(user, "leads", "edit");
   const query = await searchParams;
   const what = query.what || "restaurant";
   const where = query.where || "";
@@ -170,6 +175,7 @@ export default async function LeadsPage({
       </form>
 
       {places.length ? (
+        <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
         <form action={saveMapLeads} className="mt-4 border border-ink/10 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -201,10 +207,12 @@ export default async function LeadsPage({
             <SubmitButton label="Save selected" pendingLabel="Saving" dark />
           </div>
         </form>
+        </fieldset>
       ) : where && !mapError ? (
         <p className="mt-4 text-sm text-ink/60">No listings matched those filters.</p>
       ) : null}
 
+      {canEdit ? (
       <details className="mt-6 border border-ink/10 bg-white p-4">
         <summary className="cursor-pointer text-sm">Or paste websites you already have</summary>
         <form action={collectLeads} className="mt-4 grid gap-3">
@@ -223,6 +231,7 @@ export default async function LeadsPage({
           <SubmitButton label="Collect public contacts" pendingLabel="Reading pages" dark />
         </form>
       </details>
+      ) : null}
 
       <form method="get" className="mt-8 flex flex-wrap items-end gap-3">
         {where ? <input type="hidden" name="where" value={where} /> : null}
@@ -261,6 +270,8 @@ export default async function LeadsPage({
       <p className="mt-4 text-sm text-ink/60">
         {leads.length} saved rows, {withEmail} with an email.
       </p>
+      <ViewOnly show={!canEdit} />
+      <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
       <div className="mt-3 overflow-x-auto border border-ink/10 bg-white">
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="border-b border-ink/10 text-xs uppercase tracking-[0.12em] text-ink/45">
@@ -324,6 +335,7 @@ export default async function LeadsPage({
           </tbody>
         </table>
       </div>
+      </fieldset>
     </div>
   );
 }

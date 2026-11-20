@@ -1,8 +1,10 @@
+import { requireArea } from "@/lib/auth";
 import { getInquiries } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
 export default async function InquiriesPage() {
+  await requireArea("inquiries", "view");
   const inquiries = await getInquiries();
 
   return (

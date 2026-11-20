@@ -1,10 +1,22 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { passwordsMatch, SESSION_COOKIE, sessionToken } from "./session";
+import { failuresSinceSuccess, isLockedOut, LOCKOUT } from "./access";
+import {
+  BOOTSTRAP_ID,
+  endSession,
+  getUserById,
+  logActivity,
+  requireArea,
+  setupMode,
+  startSession,
+  usersReady
+} from "./auth";
+import { passwordsMatch, sha256Hex } from "./session";
 import { admin } from "./supabase";
+import { storeImage } from "./storage";
 import { externalLinks, parseUrls, scrapeWebsite } from "./scrape";
 import type { MapPlace } from "./maps";
 
@@ -16,20 +28,6 @@ function checked(form: FormData, key: string) {
   return form.get(key) === "on";
 }
 
-async function storeImage(file: FormDataEntryValue | null, folder: string) {
-  if (!(file instanceof File) || file.size === 0) return "";
-  if (!file.type.startsWith("image/")) throw new Error("Use an image file");
-  if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB");
-  const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-  const path = `${folder}/${crypto.randomUUID()}.${extension}`;
-  const supabase = admin();
-  const { error } = await supabase.storage.from("studio").upload(path, Buffer.from(await file.arrayBuffer()), {
-    contentType: file.type,
-    upsert: false
-  });
-  if (error) throw new Error(error.message);
-  return supabase.storage.from("studio").getPublicUrl(path).data.publicUrl;
-}
 
 function slugify(value: string) {
   return value
@@ -43,40 +41,84 @@ async function touch(paths: string[]) {
   paths.forEach((path) => revalidatePath(path));
 }
 
-async function adminPasswordOk(email: string, password: string) {
-  if (!email || !password) return false;
-  const { data, error } = await admin().rpc("admin_login", {
-    p_email: email,
-    p_password: password
-  });
-  if (!error) return data === true;
-  return passwordsMatch(password, process.env.DASHBOARD_PASSWORD || "");
+/**
+ * Setup sign-in: the shared DASHBOARD_PASSWORD, or (only before users.sql runs, when every
+ * row in `admins` is an owner) the old single-admin check.
+ */
+async function setupPasswordOk(email: string, password: string, usersTableReady: boolean) {
+  if (!password) return false;
+  if (passwordsMatch(password, process.env.DASHBOARD_PASSWORD || "")) return true;
+  if (usersTableReady || !email) return false;
+  const { data, error } = await admin().rpc("admin_login", { p_email: email, p_password: password });
+  return !error && data === true;
+}
+
+async function clientIpHash() {
+  const list = await headers();
+  const ip = (list.get("x-forwarded-for") || "").split(",")[0].trim() || list.get("x-real-ip") || "unknown";
+  return sha256Hex(`${process.env.DASHBOARD_SECRET || ""}:${ip}`);
+}
+
+async function lockedOut(email: string, ipHash: string) {
+  const since = new Date(Date.now() - LOCKOUT.windowMinutes * 60 * 1000).toISOString();
+  const supabase = admin();
+  const [byEmail, byIp] = await Promise.all([
+    supabase
+      .from("login_attempts")
+      .select("success")
+      .eq("email", email)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(LOCKOUT.perEmail + 1),
+    supabase
+      .from("login_attempts")
+      .select("success")
+      .eq("ip_hash", ipHash)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(LOCKOUT.perIp + 1)
+  ]);
+  return isLockedOut(failuresSinceSuccess(byEmail.data || []), failuresSinceSuccess(byIp.data || []));
+}
+
+async function recordAttempt(email: string, ipHash: string, success: boolean) {
+  await admin().from("login_attempts").insert({ email, ip_hash: ipHash, success });
 }
 
 export async function login(form: FormData) {
-  const email = text(form, "email").toLowerCase();
-  const password = text(form, "password");
-  if (!(await adminPasswordOk(email, password))) {
-    redirect("/dashboard/login?error=1");
+  const email = text(form, "email").toLowerCase().slice(0, 200);
+  const password = String(form.get("password") || "").slice(0, 200);
+
+  const ready = await usersReady();
+  const ipHash = await clientIpHash();
+  if (ready && (await lockedOut(email, ipHash))) redirect("/dashboard/login?error=locked");
+
+  if (await setupMode()) {
+    const ok = await setupPasswordOk(email, password, ready);
+    if (ready) await recordAttempt(email, ipHash, ok);
+    if (!ok) redirect("/dashboard/login?error=1");
+    await startSession(BOOTSTRAP_ID, 1);
+    redirect("/dashboard/users");
   }
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, await sessionToken(), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 14
-  });
+
+  const { data, error } = await admin().rpc("staff_login", { p_email: email, p_password: password });
+  const user = !error && data ? await getUserById(String(data)) : null;
+  await recordAttempt(email, ipHash, Boolean(user));
+  if (!user || !user.active) redirect("/dashboard/login?error=1");
+
+  await admin().from("admins").update({ last_login_at: new Date().toISOString() }).eq("id", user.id);
+  await startSession(user.id, user.sessionVersion);
+  await logActivity(user, "account", "Signed in");
   redirect("/dashboard");
 }
 
 export async function logout() {
-  const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
+  await endSession();
   redirect("/dashboard/login");
 }
 
 export async function saveTeam(form: FormData) {
+  const user = await requireArea("team", "edit");
   const id = text(form, "id");
   let photo_url = text(form, "photo_url");
   try {
@@ -99,17 +141,21 @@ export async function saveTeam(form: FormData) {
     ? await supabase.from("team_members").update(row).eq("id", id)
     : await supabase.from("team_members").insert(row);
   if (result.error) redirect("/dashboard/team?error=1");
+  await logActivity(user, "team", id ? "Updated a team member" : "Added a team member", String(row.name));
   await touch(["/", "/dashboard/team"]);
   redirect("/dashboard/team");
 }
 
 export async function deleteTeam(form: FormData) {
+  const user = await requireArea("team", "edit");
+  await logActivity(user, "team", "Removed a team member");
   await admin().from("team_members").delete().eq("id", text(form, "id"));
   await touch(["/", "/dashboard/team"]);
   redirect("/dashboard/team");
 }
 
 export async function saveProject(form: FormData) {
+  const user = await requireArea("projects", "edit");
   const id = text(form, "id");
   let image_url = text(form, "image_url");
   try {
@@ -134,17 +180,21 @@ export async function saveProject(form: FormData) {
     ? await supabase.from("projects").update(row).eq("id", id)
     : await supabase.from("projects").insert(row);
   if (result.error) redirect("/dashboard/projects?error=1");
+  await logActivity(user, "projects", id ? "Updated a project" : "Added a project", row.name);
   await touch(["/", "/work", "/dashboard/projects"]);
   redirect("/dashboard/projects");
 }
 
 export async function deleteProject(form: FormData) {
+  const user = await requireArea("projects", "edit");
+  await logActivity(user, "projects", "Removed a project");
   await admin().from("projects").delete().eq("id", text(form, "id"));
   await touch(["/", "/work", "/dashboard/projects"]);
   redirect("/dashboard/projects");
 }
 
 export async function saveOffer(form: FormData) {
+  const user = await requireArea("offers", "edit");
   const id = text(form, "id");
   const row = {
     name: text(form, "name"),
@@ -159,17 +209,21 @@ export async function saveOffer(form: FormData) {
     ? await supabase.from("offers").update(row).eq("id", id)
     : await supabase.from("offers").insert(row);
   if (result.error) redirect("/dashboard/offers?error=1");
+  await logActivity(user, "offers", id ? "Updated an offer" : "Added an offer", row.name);
   await touch(["/", "/dashboard/offers"]);
   redirect("/dashboard/offers");
 }
 
 export async function deleteOffer(form: FormData) {
+  const user = await requireArea("offers", "edit");
+  await logActivity(user, "offers", "Removed an offer");
   await admin().from("offers").delete().eq("id", text(form, "id"));
   await touch(["/", "/dashboard/offers"]);
   redirect("/dashboard/offers");
 }
 
 export async function savePost(form: FormData) {
+  const user = await requireArea("posts", "edit");
   const id = text(form, "id");
   const title = text(form, "title");
   const row = {
@@ -185,11 +239,14 @@ export async function savePost(form: FormData) {
     ? await supabase.from("posts").update(row).eq("id", id)
     : await supabase.from("posts").insert(row);
   if (result.error) redirect("/dashboard/posts?error=1");
+  await logActivity(user, "posts", id ? "Updated a post" : "Added a post", row.title);
   await touch(["/", "/blog", `/blog/${row.slug}`, "/dashboard/posts"]);
   redirect("/dashboard/posts");
 }
 
 export async function deletePost(form: FormData) {
+  const user = await requireArea("posts", "edit");
+  await logActivity(user, "posts", "Removed a post");
   await admin().from("posts").delete().eq("id", text(form, "id"));
   await touch(["/", "/blog", "/dashboard/posts"]);
   redirect("/dashboard/posts");
@@ -219,6 +276,7 @@ export async function sendInquiry(form: FormData) {
 }
 
 export async function collectLeads(form: FormData) {
+  const user = await requireArea("leads", "edit");
   const direct = parseUrls(text(form, "urls")).slice(0, 4);
   const directory = text(form, "directory");
   let urls = direct;
@@ -242,10 +300,12 @@ export async function collectLeads(form: FormData) {
   }
   const { error } = await admin().from("leads").insert(rows);
   if (error) redirect(`/dashboard/leads?error=${encodeURIComponent(error.message)}`);
+  await logActivity(user, "leads", "Collected leads from websites", `${rows.length} rows`);
   redirect("/dashboard/leads?saved=1");
 }
 
 export async function saveMapLeads(form: FormData) {
+  const user = await requireArea("leads", "edit");
   const picked = new Set(form.getAll("pick").map((value) => String(value)));
   const readSites = form.get("readSites") === "on";
   const rows = [];
@@ -290,10 +350,12 @@ export async function saveMapLeads(form: FormData) {
   const next = text(form, "next");
   const dest = next.startsWith("/dashboard/") && !next.includes("//") ? next : "/dashboard/leads";
   if (error) redirect(`${dest}${dest.includes("?") ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
+  await logActivity(user, "leads", "Saved map listings to leads", `${rows.length} rows`);
   redirect(`${dest}${dest.includes("?") ? "&" : "?"}saved=${rows.length}`);
 }
 
 export async function updateLead(form: FormData) {
+  const user = await requireArea("leads", "edit");
   const { error } = await admin()
     .from("leads")
     .update({
@@ -310,10 +372,13 @@ export async function updateLead(form: FormData) {
   if (error) {
     redirect(`/dashboard/leads?error=${encodeURIComponent("Run the outreach SQL once, then save this row again.")}`);
   }
+  await logActivity(user, "leads", "Updated a lead", text(form, "business_name"));
   redirect("/dashboard/leads");
 }
 
 export async function deleteLead(form: FormData) {
+  const user = await requireArea("leads", "edit");
+  await logActivity(user, "leads", "Removed a lead");
   await admin().from("leads").delete().eq("id", text(form, "id"));
   await touch(["/dashboard/leads"]);
   redirect("/dashboard/leads");

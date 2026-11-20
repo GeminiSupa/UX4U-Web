@@ -13,7 +13,11 @@ export default async function LoginPage({
         <img src="/logo-on-dark.png" alt="UX4U" className="h-8 w-auto" />
         <h1 className="mt-3 font-serif text-4xl">Studio desk</h1>
         <p className="mt-3 text-sm text-paper/65">Team, projects, offers, journal, and the lead list.</p>
-        {query.error ? <p className="mt-4 text-sm text-lime">That email or password did not match.</p> : null}
+        {query.error === "locked" ? (
+          <p className="mt-4 text-sm text-lime">Too many attempts. Wait 15 minutes, then try again.</p>
+        ) : query.error ? (
+          <p className="mt-4 text-sm text-lime">That email or password did not match.</p>
+        ) : null}
         <label className="mt-6 block text-sm">
           Email
           <input

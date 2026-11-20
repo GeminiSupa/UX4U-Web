@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { CookieConsent } from "@/components/CookieConsent";
 import { JsonLd } from "@/components/JsonLd";
+import { PublicOnly } from "@/components/PublicOnly";
 import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { WhatsAppFab } from "@/components/WhatsAppButton";
 import {
@@ -102,8 +103,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={organization} />
         <JsonLd data={website} />
         {children}
-        <WhatsAppFab />
-        <CookieConsent />
+        <PublicOnly>
+          <WhatsAppFab />
+          <CookieConsent />
+        </PublicOnly>
         <SiteAnalytics />
       </body>
     </html>

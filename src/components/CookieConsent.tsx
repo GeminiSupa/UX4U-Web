@@ -25,8 +25,8 @@ export function CookieConsent() {
       className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 mx-auto max-w-lg border border-ink/15 bg-paper p-4 shadow-[0_20px_50px_-24px_rgba(22,24,21,0.55)] sm:inset-x-auto sm:bottom-6 sm:left-6 sm:right-auto sm:p-5"
     >
       <p className="text-sm leading-relaxed text-ink/80">
-        We use privacy-friendly analytics (page paths, referrer, device type — no ads, no cross-site
-        profiles) only if you allow it. Essential cookies for the dashboard login are always on.{" "}
+        We use privacy-friendly analytics (page paths, referrer, device type and country — no ads, no
+        cross-site profiles, no IP addresses stored) only if you allow it. Essential cookies for the dashboard login are always on.{" "}
         <Link href="/privacy" className="underline">
           Privacy
         </Link>

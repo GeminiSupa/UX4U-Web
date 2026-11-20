@@ -1,3 +1,6 @@
+import { can } from "@/lib/access";
+import { requireArea } from "@/lib/auth";
+import { ViewOnly } from "@/components/ViewOnly";
 import { deleteTeam, saveTeam } from "@/lib/actions";
 import { control } from "@/lib/ui";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -6,13 +9,17 @@ import { getTeam } from "@/lib/data";
 export const dynamic = "force-dynamic";
 
 export default async function TeamPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const user = await requireArea("team", "view");
+  const canEdit = can(user, "team", "edit");
   const query = await searchParams;
   const team = await getTeam(false);
 
   return (
     <div>
+      <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
       <h1 className="font-serif text-4xl">Team</h1>
       <p className="mt-2 text-sm text-ink/65">Names, roles, and a photo. Photos are stored in the studio image bucket.</p>
+      <ViewOnly show={!canEdit} />
       {query.error ? (
         <p className="mt-4 text-sm text-red-800">
           Could not save. If this was a photo, run the storage SQL in Supabase, then try again.
@@ -63,6 +70,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           </details>
         ))}
       </div>
+      </fieldset>
     </div>
   );
 }

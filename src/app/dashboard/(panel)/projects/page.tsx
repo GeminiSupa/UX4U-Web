@@ -1,3 +1,6 @@
+import { can } from "@/lib/access";
+import { requireArea } from "@/lib/auth";
+import { ViewOnly } from "@/components/ViewOnly";
 import { deleteProject, saveProject } from "@/lib/actions";
 import { control } from "@/lib/ui";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -6,15 +9,19 @@ import { getProjects } from "@/lib/data";
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const user = await requireArea("projects", "view");
+  const canEdit = can(user, "projects", "edit");
   const query = await searchParams;
   const projects = await getProjects(false);
 
   return (
     <div>
+      <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
       <h1 className="font-serif text-4xl">Projects</h1>
       <p className="mt-2 max-w-xl text-sm text-ink/65">
         One feature per line. Paste an image URL when you have a screenshot; it shows on the work page.
       </p>
+      <ViewOnly show={!canEdit} />
       {query.error ? <p className="mt-4 text-sm text-red-800">Could not save that project.</p> : null}
       <form action={saveProject} className="mt-6 grid gap-3 border border-ink/10 bg-white p-4">
         <div className="grid gap-3 md:grid-cols-2">
@@ -62,6 +69,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
           </details>
         ))}
       </div>
+      </fieldset>
     </div>
   );
 }

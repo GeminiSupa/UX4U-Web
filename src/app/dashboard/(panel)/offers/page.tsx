@@ -1,3 +1,6 @@
+import { can } from "@/lib/access";
+import { requireArea } from "@/lib/auth";
+import { ViewOnly } from "@/components/ViewOnly";
 import { deleteOffer, saveOffer } from "@/lib/actions";
 import { control } from "@/lib/ui";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -6,13 +9,17 @@ import { getOffers } from "@/lib/data";
 export const dynamic = "force-dynamic";
 
 export default async function OffersPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const user = await requireArea("offers", "view");
+  const canEdit = can(user, "offers", "edit");
   const query = await searchParams;
   const offers = await getOffers(false);
 
   return (
     <div>
+      <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
       <h1 className="font-serif text-4xl">Offers</h1>
       <p className="mt-2 text-sm text-ink/65">The engagements on the home page. One point per line.</p>
+      <ViewOnly show={!canEdit} />
       {query.error ? <p className="mt-4 text-sm text-red-800">Could not save that offer.</p> : null}
       <form action={saveOffer} className="mt-6 grid gap-3 border border-ink/10 bg-white p-4">
         <label className="text-sm">Name<input className={control} name="name" required /></label>
@@ -48,6 +55,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
           </details>
         ))}
       </div>
+      </fieldset>
     </div>
   );
 }

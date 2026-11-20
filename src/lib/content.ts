@@ -103,6 +103,16 @@ export type Post = {
   body: string;
   published: boolean;
   created_at: string;
+  /** Block content from the editor. Older posts only have body. */
+  blocks?: unknown;
+  cover_url?: string;
+  seo_title?: string;
+  seo_description?: string;
+  focus_keyword?: string;
+  author_name?: string;
+  /** Goes live at this time; empty means as soon as it is published. */
+  publish_at?: string | null;
+  updated_at?: string;
 };
 
 export const services = [

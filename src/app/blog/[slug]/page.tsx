@@ -1,4 +1,6 @@
+import { BlockView } from "@/components/BlockView";
 import { JsonLd } from "@/components/JsonLd";
+import { blocksFromBody, cleanBlocks, stripInline, type Block } from "@/lib/blocks";
 import { SiteChrome } from "@/components/SiteChrome";
 import { ensureSeed, getPost, getPosts } from "@/lib/data";
 import { pageMeta } from "@/lib/seo";
@@ -55,12 +57,17 @@ export async function generateMetadata({
   if (!meta) {
     const post = await getPost(slug);
     if (!post) return {};
-    return pageMeta({
-      title: post.title,
-      description: post.excerpt,
+    const base = pageMeta({
+      title: post.seo_title || post.title,
+      description: post.seo_description || post.excerpt,
       path: `/blog/${slug}`,
       type: "article"
     });
+    if (post.cover_url) {
+      base.openGraph = { ...base.openGraph, images: [{ url: post.cover_url }] };
+      base.twitter = { ...base.twitter, images: [post.cover_url] };
+    }
+    return base;
   }
   return pageMeta({
     title: meta.title,
@@ -77,36 +84,63 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   if (!post) notFound();
   const more = (await getPosts(true)).filter((item) => item.slug !== slug).slice(0, 2);
   const related = RELATED[slug];
-  const byline = POST_BYLINES[slug];
-  const article =
-    byline &&
-    ({
-      "@context": "https://schema.org",
-      "@type": "Article",
-      headline: post.title,
-      author: { "@type": "Person", name: byline.author },
-      datePublished: byline.date,
-      mainEntityOfPage: `${SITE_URL}/blog/${slug}`
-    } as Record<string, unknown>);
+  const legacy = POST_BYLINES[slug];
+  const author = post.author_name || legacy?.author || "";
+  const published = (post.publish_at || legacy?.date || post.created_at || "").slice(0, 10);
+  const modified = (post.updated_at || "").slice(0, 10);
+  const stored = cleanBlocks(post.blocks);
+  const blocks: Block[] = stored.length ? stored : blocksFromBody(post.body);
+  const faqs = blocks.filter((block) => block.type === "faq" && block.question && block.answer) as Extract<Block, { type: "faq" }>[];
+  const article = author
+    ? ({
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        headline: post.seo_title || post.title,
+        description: post.seo_description || post.excerpt,
+        author: { "@type": "Person", name: author },
+        publisher: { "@type": "Organization", name: "UX4U", url: SITE_URL },
+        datePublished: published || undefined,
+        dateModified: modified || published || undefined,
+        image: post.cover_url || undefined,
+        keywords: post.focus_keyword || undefined,
+        mainEntityOfPage: `${SITE_URL}/blog/${slug}`
+      } as Record<string, unknown>)
+    : null;
+  const faqData = faqs.length
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: { "@type": "Answer", text: stripInline(faq.answer) }
+        }))
+      }
+    : null;
 
   return (
     <SiteChrome>
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-5 sm:py-14">
         {article ? <JsonLd data={article} /> : null}
+        {faqData ? <JsonLd data={faqData} /> : null}
         <Link href="/blog" className="text-sm text-ink/50">
           Journal
         </Link>
         <h1 className="display mt-4 text-4xl sm:text-5xl">{post.title}</h1>
-        {byline ? (
+        {author || published ? (
           <p className="mt-3 text-sm text-ink/55">
-            By {byline.author} · <time dateTime={byline.date}>{byline.date}</time>
+            {author ? <>By {author}</> : null}
+            {author && published ? " · " : null}
+            {published ? <time dateTime={published}>{published}</time> : null}
+            {modified && modified > published ? (
+              <> · Updated <time dateTime={modified}>{modified}</time></>
+            ) : null}
           </p>
         ) : null}
         <p className="mt-6 text-lg text-ink/70">{post.excerpt}</p>
-        <div className="mt-10 space-y-5 text-base leading-relaxed text-ink/85">
-          {post.body.split(/\n\n+/).map((paragraph) => (
-            <p key={paragraph.slice(0, 24)}>{paragraph}</p>
-          ))}
+        {post.cover_url ? <img src={post.cover_url} alt="" className="mt-8 w-full rounded-2xl border border-ink/10" /> : null}
+        <div className="mt-10">
+          <BlockView blocks={blocks} />
         </div>
         {related ? (
           <div className="mt-12 border-t border-ink/10 pt-6">

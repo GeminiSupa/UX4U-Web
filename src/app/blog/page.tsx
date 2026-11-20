@@ -26,15 +26,19 @@ export default async function BlogPage() {
         <h1 className="display mt-4 text-4xl sm:text-5xl">How we think about the work.</h1>
         <div className="mt-10 grid auto-rows-fr gap-5 md:grid-cols-2 lg:grid-cols-3">
           {posts.map((post, index) => {
-            const byline = POST_BYLINES[post.slug];
+            const legacy = POST_BYLINES[post.slug];
+            const author = post.author_name || legacy?.author || "";
+            const date = (post.publish_at || legacy?.date || "").slice(0, 10);
+            const byline = author ? { author, date } : null;
             return (
               <Reveal key={post.id} delay={index * 70} className="h-full">
                 <TiltCard as="a" href={`/blog/${post.slug}`} className={`${card} min-h-[14rem]`}>
+                  {post.cover_url ? <img src={post.cover_url} alt="" className="h-44 w-full object-cover" loading="lazy" /> : null}
                   <div className={cardPad}>
                     <h2 className={cardTitle}>{post.title}</h2>
                     {byline ? (
                       <p className="mt-2 text-xs text-ink/50">
-                        By {byline.author} · <time dateTime={byline.date}>{byline.date}</time>
+                        By {byline.author}{byline.date ? <> · <time dateTime={byline.date}>{byline.date}</time></> : null}
                       </p>
                     ) : null}
                     <p className={cardBody}>{post.excerpt}</p>
