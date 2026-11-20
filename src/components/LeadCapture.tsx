@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { sendInquiry } from "@/lib/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { InquiryContactFields } from "@/components/InquiryContactFields";
 
 const STORAGE_KEY = "ux4u-lead-capture";
 const SHOW_AFTER_MS = 14000;
@@ -105,10 +106,7 @@ export function LeadCapture() {
             Name
             <input className="mt-1 w-full border border-ink/15 bg-white/80 px-3 py-2.5 text-sm" name="name" required autoFocus />
           </label>
-          <label className="text-sm">
-            Email
-            <input className="mt-1 w-full border border-ink/15 bg-white/80 px-3 py-2.5 text-sm" name="email" type="email" required />
-          </label>
+          <InquiryContactFields inputClassName="mt-1 w-full border border-ink/15 bg-white/80 px-3 py-2.5 text-sm" />
           <label className="text-sm">
             Company <span className="text-ink/40">(optional)</span>
             <input className="mt-1 w-full border border-ink/15 bg-white/80 px-3 py-2.5 text-sm" name="company" />

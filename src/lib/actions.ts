@@ -261,18 +261,45 @@ export async function sendInquiry(form: FormData) {
   const next = safeNextPath(text(form, "next") || "/contact?sent=1");
   const fail = next.includes("?") ? `${next.split("?")[0]}?error=1` : "/contact?error=1";
   const row = {
-    name: text(form, "name"),
-    email: text(form, "email"),
-    company: text(form, "company"),
-    service: text(form, "service") || "Concept to launch",
-    message: text(form, "message")
+    name: text(form, "name").slice(0, 120),
+    email: text(form, "email").toLowerCase().slice(0, 200),
+    phone: text(form, "phone").slice(0, 30),
+    company: text(form, "company").slice(0, 160),
+    service: (text(form, "service") || "Concept to launch").slice(0, 120),
+    message: text(form, "message").slice(0, 5000)
   };
-  if (row.name.length < 2 || !row.email.includes("@") || row.message.length < 2) {
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email);
+  const phoneOk = row.phone.replace(/\D/g, "").length >= 7;
+  if (
+    row.name.length < 2 ||
+    row.message.length < 2 ||
+    (!row.email && !row.phone) ||
+    (row.email && !emailOk) ||
+    (row.phone && !phoneOk)
+  ) {
     redirect(fail);
   }
-  const { error } = await admin().from("inquiries").insert(row);
+  const supabase = admin();
+  let { error } = await supabase.from("inquiries").insert(row);
+  // Keeps submissions working until an existing database runs the phone-column migration.
+  if (error) {
+    const { phone, ...legacyRow } = row;
+    const legacyMessage = phone ? `${legacyRow.message}\n\nPhone / WhatsApp: ${phone}` : legacyRow.message;
+    ({ error } = await supabase.from("inquiries").insert({ ...legacyRow, message: legacyMessage }));
+  }
   if (error) redirect(fail);
   redirect(next.includes("sent=") ? next : next.includes("?") ? `${next}&sent=1` : `${next}?sent=1`);
+}
+
+export async function deleteInquiry(form: FormData) {
+  const user = await requireArea("inquiries", "edit");
+  const id = text(form, "id");
+  const { data } = await admin().from("inquiries").select("name").eq("id", id).maybeSingle();
+  const { error } = await admin().from("inquiries").delete().eq("id", id);
+  if (error) redirect("/dashboard/inquiries?error=delete");
+  await logActivity(user, "inquiries", "Deleted an inquiry", String(data?.name || ""));
+  await touch(["/dashboard/inquiries"]);
+  redirect("/dashboard/inquiries?deleted=1");
 }
 
 export async function collectLeads(form: FormData) {

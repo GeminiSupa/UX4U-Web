@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteChrome } from "@/components/SiteChrome";
 import { SubmitButton } from "@/components/SubmitButton";
+import { InquiryContactFields } from "@/components/InquiryContactFields";
 import { WhatsAppLink } from "@/components/WhatsAppButton";
 import { sendInquiry } from "@/lib/actions";
 import { pageMeta } from "@/lib/seo";
@@ -82,17 +83,14 @@ export default async function ContactPage({
             <form action={sendInquiry} className="grid gap-4">
               {query.error ? (
                 <p className="border border-red-900/20 bg-red-50 px-3 py-2 text-sm">
-                  Add your name, a real email, and a short note. If it still fails, email info@ux4u.online.
+                  Add your name, a valid email or phone number, and a short note. If it still fails, email info@ux4u.online.
                 </p>
               ) : null}
               <label className="text-sm">
                 Name
                 <input className={field} name="name" required />
               </label>
-              <label className="text-sm">
-                Email
-                <input className={field} name="email" type="email" required />
-              </label>
+              <InquiryContactFields inputClassName={field} />
               <label className="text-sm">
                 Company
                 <input className={field} name="company" />

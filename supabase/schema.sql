@@ -46,11 +46,14 @@ create table if not exists inquiries (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   email text not null,
+  phone text not null default '',
   company text not null default '',
   service text not null default '',
   message text not null,
   created_at timestamptz not null default now()
 );
+
+alter table inquiries add column if not exists phone text not null default '';
 
 create table if not exists leads (
   id uuid primary key default gen_random_uuid(),
