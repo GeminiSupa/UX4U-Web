@@ -1,12 +1,12 @@
 import "server-only";
 
 /**
- * Minimal OpenAI Responses API client (no SDK). Server only: the key never reaches the browser.
- * OPENAI_MODEL overrides the default model.
+ * Minimal Gemini Interactions API client (no SDK). Server only: the key never reaches the browser.
+ * GEMINI_MODEL overrides the default model.
  */
 
-const ENDPOINT = "https://api.openai.com/v1/responses";
-export const DEFAULT_MODEL = "gpt-5-mini";
+const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
+export const DEFAULT_MODEL = "gemini-3.8-flash";
 
 export type Citation = { url: string; title: string };
 export type AiResult = { text: string; citations: Citation[] };
@@ -14,7 +14,7 @@ export type AiResult = { text: string; citations: Citation[] };
 type JsonSchema = Record<string, unknown>;
 
 export function aiConfigured() {
-  return Boolean(process.env.OPENAI_API_KEY);
+  return Boolean(process.env.GEMINI_API_KEY);
 }
 
 export class AiError extends Error {}
@@ -36,23 +36,31 @@ export async function askAi({
   maxOutputTokens?: number;
   timeoutMs?: number;
 }): Promise<AiResult> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new AiError("Add OPENAI_API_KEY to the server environment to use AI features.");
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new AiError("Add GEMINI_API_KEY to the server environment to use AI features.");
 
   const body: Record<string, unknown> = {
-    model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
-    instructions,
+    model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
+    system_instruction: instructions,
     input,
-    max_output_tokens: maxOutputTokens
+    store: false,
+    generation_config: { max_output_tokens: maxOutputTokens }
   };
-  if (webSearch) body.tools = [{ type: "web_search" }];
-  if (schema) body.text = { format: { type: "json_schema", name: schemaName, schema, strict: true } };
+  if (webSearch) body.tools = [{ type: "google_search" }];
+  if (schema) body.response_format = { type: "text", mime_type: "application/json", schema };
+
+  // Kept in the public options for compatibility with existing callers. Gemini schemas are unnamed.
+  void schemaName;
 
   let response: Response;
   try {
     response = await fetch(ENDPOINT, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: {
+        "x-goog-api-key": key,
+        "Content-Type": "application/json",
+        "Api-Revision": "2026-05-20"
+      },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(timeoutMs),
       cache: "no-store"
@@ -68,15 +76,15 @@ export async function askAi({
   return readOutput(json);
 }
 
-/** Pulls text and URL citations out of a raw Responses API payload. */
+/** Pulls text and URL citations out of a raw Gemini Interactions API payload. */
 export function readOutput(json: Record<string, unknown>): AiResult {
   const parts: string[] = [];
   const citations: Citation[] = [];
-  const output = Array.isArray(json.output) ? (json.output as Record<string, unknown>[]) : [];
-  for (const item of output) {
-    if (item.type !== "message" || !Array.isArray(item.content)) continue;
+  const steps = Array.isArray(json.steps) ? (json.steps as Record<string, unknown>[]) : [];
+  for (const item of steps) {
+    if (item.type !== "model_output" || !Array.isArray(item.content)) continue;
     for (const content of item.content as Record<string, unknown>[]) {
-      if (content.type !== "output_text") continue;
+      if (content.type !== "text") continue;
       parts.push(String(content.text || ""));
       const notes = Array.isArray(content.annotations) ? (content.annotations as Record<string, unknown>[]) : [];
       for (const note of notes) {

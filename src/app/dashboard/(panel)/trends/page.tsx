@@ -43,9 +43,9 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
           </form>
         ) : null}
       </div>
-      {!aiConfigured() ? <p className="mt-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-900">Add OPENAI_API_KEY to the server environment to create reports.</p> : null}
+      {!aiConfigured() ? <p className="mt-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-900">Add GEMINI_API_KEY to the server environment to create reports.</p> : null}
       {!ready ? <p className="mt-4 border border-amber-800/20 bg-amber-50 px-4 py-3 text-sm">Run <code>supabase/growth.sql</code> in Supabase first.</p> : null}
-      {query.error ? <p className="mt-4 text-sm text-red-800">{query.error === "missing" ? "That item no longer exists." : query.error === "draft" ? "Could not create the draft." : "The report could not be created. Check the OpenAI key and try again."}</p> : null}
+      {query.error ? <p className="mt-4 text-sm text-red-800">{query.error === "missing" ? "That item no longer exists." : query.error === "draft" ? "Could not create the draft." : "The report could not be created. Check the Gemini key and try again."}</p> : null}
 
       {report ? (
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
