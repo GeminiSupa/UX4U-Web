@@ -5,7 +5,32 @@ import { redirect } from "next/navigation";
 import { can } from "./access";
 import { getUserById, logActivity, requireArea, requireUser } from "./auth";
 import { admin } from "./supabase";
-import { canModifyTask, getTask, isPriority, isStatus, notify, runningEntry, type TaskStatus } from "./team";
+import { canCloseTask, canModifyTask, getTask, isPriority, isStatus, notify, runningEntry, type TaskStatus } from "./team";
+import { getProject } from "./workspace";
+
+const WORKSPACE_COLUMNS = ["project_id", "points", "start_at", "submitted_at", "submission_note", "submission_url", "approved_by_name"];
+
+/** True when the error is a missing column, i.e. supabase/workspace.sql has not run yet. */
+function missingColumn(error: { code?: string; message?: string } | null) {
+  return Boolean(error && (error.code === "42703" || error.code === "PGRST204" || /column/i.test(error.message || "")));
+}
+
+function withoutWorkspace(row: Record<string, unknown>) {
+  const copy = { ...row };
+  for (const key of WORKSPACE_COLUMNS) delete copy[key];
+  return copy;
+}
+
+async function projectIdFrom(form: FormData) {
+  const id = uuid(text(form, "project_id"));
+  if (!id) return null;
+  const project = await getProject(id);
+  return project ? project.id : null;
+}
+
+function pointsFrom(form: FormData) {
+  return Math.max(0, Math.min(100, Math.round(Number(text(form, "points", 6)) || 0)));
+}
 
 function text(form: FormData, key: string, max = 300) {
   return String(form.get(key) || "").trim().slice(0, max);
@@ -48,10 +73,11 @@ export async function createTask(form: FormData) {
   if (!title) redirect("/dashboard/tasks?error=title");
   const assignee_id = await assignTo(manage, user.id, text(form, "assignee_id"));
   const assignee = assignee_id ? await getUserById(assignee_id) : null;
-  const status = isStatus(form.get("status")) ? (form.get("status") as TaskStatus) : "todo";
-  const { data, error } = await admin()
-    .from("tasks")
-    .insert({
+  let status = isStatus(form.get("status")) ? (form.get("status") as TaskStatus) : "todo";
+  const points = manage ? pointsFrom(form) : 0;
+  if (status === "done" && !canCloseTask(user, { created_by: user.id, assignee_id, points })) status = "review";
+  const project_id = await projectIdFrom(form);
+  const row: Record<string, unknown> = {
       title,
       description: text(form, "description", 5000),
       status,
@@ -63,15 +89,22 @@ export async function createTask(form: FormData) {
       created_by_name: user.name,
       due_at: dueFrom(text(form, "due_at", 40)),
       estimate_minutes: Math.max(0, Math.min(100000, Math.round(Number(text(form, "estimate_hours", 10) || 0) * 60))),
-      position: Date.now() / 1000
-    })
-    .select("id")
-    .single();
+      position: Date.now() / 1000,
+      completed_at: status === "done" ? new Date().toISOString() : null,
+      project_id,
+      points,
+      start_at: dueFrom(text(form, "start_at", 40)),
+      submitted_at: status === "review" ? new Date().toISOString() : null
+  };
+  let result = await admin().from("tasks").insert(row).select("id").single();
+  if (missingColumn(result.error)) result = await admin().from("tasks").insert(withoutWorkspace(row)).select("id").single();
+  const { data, error } = result;
   if (error || !data) redirect("/dashboard/tasks?error=save");
   await logActivity(user, "tasks", "Created a task", title);
   await tellAssignee(assignee_id, user.id, title, String(data.id));
   revalidatePath("/dashboard/tasks");
-  redirect(text(form, "next", 200).startsWith("/dashboard/") ? text(form, "next", 200) : "/dashboard/tasks");
+  const next = text(form, "next", 200);
+  redirect(next.startsWith("/dashboard/") ? next : "/dashboard/tasks");
 }
 
 export async function updateTask(form: FormData) {
@@ -82,11 +115,12 @@ export async function updateTask(form: FormData) {
   const manage = can(user, "tasks", "edit");
   const assignee_id = manage ? await assignTo(true, user.id, text(form, "assignee_id")) : task!.assignee_id;
   const assignee = assignee_id ? await getUserById(assignee_id) : null;
-  const status = isStatus(form.get("status")) ? (form.get("status") as TaskStatus) : task!.status;
+  let status = isStatus(form.get("status")) ? (form.get("status") as TaskStatus) : task!.status;
+  const points = manage ? pointsFrom(form) : task!.points;
+  if (status === "done" && task!.status !== "done" && !canCloseTask(user, { ...task!, points })) status = "review";
+  if (task!.status === "done" && status !== "done" && !canCloseTask(user, task!)) status = "done";
   const title = text(form, "title", 200) || task!.title;
-  const { error } = await admin()
-    .from("tasks")
-    .update({
+  const row: Record<string, unknown> = {
       title,
       description: text(form, "description", 5000),
       status,
@@ -97,9 +131,14 @@ export async function updateTask(form: FormData) {
       due_at: dueFrom(text(form, "due_at", 40)),
       estimate_minutes: Math.max(0, Math.min(100000, Math.round(Number(text(form, "estimate_hours", 10) || 0) * 60))),
       completed_at: status === "done" ? task!.completed_at || new Date().toISOString() : null,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", id);
+      updated_at: new Date().toISOString(),
+      project_id: await projectIdFrom(form),
+      points,
+      start_at: dueFrom(text(form, "start_at", 40)),
+      submitted_at: status === "review" ? task!.submitted_at || new Date().toISOString() : task!.submitted_at
+  };
+  let { error } = await admin().from("tasks").update(row).eq("id", id);
+  if (missingColumn(error)) ({ error } = await admin().from("tasks").update(withoutWorkspace(row)).eq("id", id));
   if (error) redirect(`/dashboard/tasks/${id}?error=save`);
   await logActivity(user, "tasks", status === "done" && task!.status !== "done" ? "Completed a task" : "Updated a task", title);
   if (assignee_id !== task!.assignee_id) await tellAssignee(assignee_id, user.id, title, id);
@@ -113,15 +152,21 @@ export async function moveTask(id: string, status: string, position: number): Pr
   const task = uuid(id) ? await getTask(id) : null;
   if (!task || !isStatus(status) || !Number.isFinite(position)) return { ok: false, error: "Could not move that task." };
   if (!canModifyTask(user, task)) return { ok: false, error: "You can only move your own tasks." };
-  const { error } = await admin()
-    .from("tasks")
-    .update({
-      status,
-      position,
-      completed_at: status === "done" ? task.completed_at || new Date().toISOString() : null,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", id);
+  if (status === "done" && task.status !== "done" && !canCloseTask(user, task)) {
+    return { ok: false, error: "Submit it for review instead — a manager approves it and awards the points." };
+  }
+  if (task.status === "done" && status !== "done" && !canCloseTask(user, task)) {
+    return { ok: false, error: "Only a manager can reopen an approved task." };
+  }
+  const row: Record<string, unknown> = {
+    status,
+    position,
+    completed_at: status === "done" ? task.completed_at || new Date().toISOString() : null,
+    updated_at: new Date().toISOString(),
+    submitted_at: status === "review" ? task.submitted_at || new Date().toISOString() : task.submitted_at
+  };
+  let { error } = await admin().from("tasks").update(row).eq("id", id);
+  if (missingColumn(error)) ({ error } = await admin().from("tasks").update(withoutWorkspace(row)).eq("id", id));
   if (error) return { ok: false, error: "Could not move that task." };
   if (status !== task.status) {
     await logActivity(user, "tasks", status === "done" ? "Completed a task" : `Moved a task to ${status}`, task.title);

@@ -17,6 +17,10 @@ export type BoardTask = {
   position: number;
   editable: boolean;
   running: boolean;
+  projectName?: string;
+  projectColor?: string;
+  points?: number;
+  steps?: { done: number; total: number };
 };
 
 const PRIORITY: Record<string, string> = {
@@ -45,7 +49,14 @@ function due(value: string | null, done: boolean) {
   );
 }
 
-export function TaskBoard({ columns, tasks: initial }: { columns: { id: string; label: string }[]; tasks: BoardTask[] }) {
+const HINTS: Record<string, string> = {
+  todo: "Not started",
+  doing: "Being worked on",
+  review: "Submitted — waiting for approval",
+  done: "Approved"
+};
+
+export function TaskBoard({ columns, tasks: initial, back = "/dashboard/tasks" }: { columns: { id: string; label: string }[]; tasks: BoardTask[]; back?: string }) {
   const [tasks, setTasks] = useState(initial);
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -103,9 +114,15 @@ export function TaskBoard({ columns, tasks: initial }: { columns: { id: string; 
               className={`flex min-h-[220px] flex-col rounded-2xl border p-3 transition ${over === column.id ? "border-moss bg-moss/5" : "border-ink/10 bg-ink/[0.025]"}`}
               aria-label={column.label}
             >
-              <header className="mb-3 flex items-baseline justify-between px-1">
-                <h2 className="text-sm font-medium">{column.label} <span className="text-ink/40">{list.length}</span></h2>
-                <span className="text-xs text-ink/45">{hours(total)} logged</span>
+              <header className="mb-3 px-1">
+                <div className="flex items-baseline justify-between">
+                  <h2 className="text-sm font-medium">{column.label} <span className="text-ink/40">{list.length}</span></h2>
+                  <span className="text-xs text-ink/45">
+                    {hours(total)}
+                    {list.some((task) => task.points) ? ` · ${list.reduce((sum, task) => sum + (task.points || 0), 0)} pts` : ""}
+                  </span>
+                </div>
+                {HINTS[column.id] ? <p className="mt-0.5 text-[11px] text-ink/40">{HINTS[column.id]}</p> : null}
               </header>
               <ol className="space-y-2">
                 {list.map((task) => (
@@ -135,13 +152,29 @@ export function TaskBoard({ columns, tasks: initial }: { columns: { id: string; 
                       <Link href={`/dashboard/tasks/${task.id}`} className="text-sm font-medium leading-snug hover:underline">{task.title}</Link>
                       <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${PRIORITY[task.priority] || PRIORITY.normal}`}>{task.priority}</span>
                     </div>
-                    {task.client ? <p className="mt-1 text-xs text-ink/50">{task.client}</p> : null}
+                    {task.projectName || task.client ? (
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-ink/55">
+                        {task.projectName ? <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: task.projectColor }} aria-hidden /> : null}
+                        <span className="truncate">{[task.projectName, task.client].filter(Boolean).join(" · ")}</span>
+                      </p>
+                    ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                       {due(task.dueAt, task.status === "done")}
                       <span className="text-xs text-ink/50">
                         {hours(task.loggedMinutes)}{task.estimateMinutes ? ` / ${hours(task.estimateMinutes)}` : ""}
                       </span>
+                      {task.steps?.total ? (
+                        <span className={`text-xs ${task.steps.done === task.steps.total ? "text-moss" : "text-ink/50"}`}>
+                          ☑ {task.steps.done}/{task.steps.total}
+                        </span>
+                      ) : null}
+                      {task.points ? <span className="rounded-full bg-lime/40 px-1.5 py-0.5 text-[11px] font-medium text-ink">{task.points} pts</span> : null}
                     </div>
+                    {task.steps?.total ? (
+                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-ink/5" aria-hidden>
+                        <div className="h-full rounded-full bg-sky-600/60" style={{ width: `${(task.steps.done / task.steps.total) * 100}%` }} />
+                      </div>
+                    ) : null}
                     {task.estimateMinutes ? (
                       <div className="mt-2 h-1 overflow-hidden rounded-full bg-ink/5" aria-hidden>
                         <div className={`h-full rounded-full ${task.loggedMinutes > task.estimateMinutes ? "bg-red-700/60" : "bg-moss/60"}`} style={{ width: `${Math.min(100, (task.loggedMinutes / task.estimateMinutes) * 100)}%` }} />
@@ -160,7 +193,7 @@ export function TaskBoard({ columns, tasks: initial }: { columns: { id: string; 
                         ) : (
                           <form action={startTimer}>
                             <input type="hidden" name="task_id" value={task.id} />
-                            <input type="hidden" name="next" value="/dashboard/tasks" />
+                            <input type="hidden" name="next" value={back} />
                             <button type="submit" className="rounded-full border border-ink/15 px-2.5 py-1 text-xs hover:bg-ink/5">▶ Start</button>
                           </form>
                         )

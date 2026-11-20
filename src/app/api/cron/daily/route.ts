@@ -1,7 +1,7 @@
 import { can } from "@/lib/access";
 import { aiConfigured } from "@/lib/ai";
 import { listUsers } from "@/lib/auth";
-import { runTaskReminders } from "@/lib/reminders";
+import { runTaskReminders, runWeeklyUpdateReminders } from "@/lib/reminders";
 import { notify } from "@/lib/team";
 import { generateTrendReport, listTrendReports, weekOf } from "@/lib/trends";
 
@@ -20,6 +20,12 @@ export async function GET(request: Request) {
     result.reminders = await runTaskReminders();
   } catch (error) {
     result.reminders = { error: error instanceof Error ? error.message : "failed" };
+  }
+
+  try {
+    result.weekly = await runWeeklyUpdateReminders();
+  } catch (error) {
+    result.weekly = { error: error instanceof Error ? error.message : "failed" };
   }
 
   // Weekly trend report: the first daily run on or after Monday that finds no report for this week.

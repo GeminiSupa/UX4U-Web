@@ -43,3 +43,33 @@ export async function runTaskReminders(now = new Date()) {
   }
   return { sent };
 }
+
+/**
+ * Friday nudge: people with task access who have not posted this week's update get one reminder.
+ * Runs from the daily cron; does nothing on other days or before supabase/workspace.sql has run.
+ */
+export async function runWeeklyUpdateReminders(now = new Date()) {
+  if (now.getUTCDay() !== 5) return { sent: 0, skipped: "not Friday" };
+  const supabase = admin();
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+  const week = day.toISOString().slice(0, 10);
+  const posted = await supabase.from("weekly_updates").select("user_id").eq("week_of", week);
+  if (posted.error) return { sent: 0, skipped: "not set up" };
+  const done = new Set((posted.data || []).map((row) => String(row.user_id)));
+  const { data: people } = await supabase.from("admins").select("id, email, role, permissions, active");
+  let sent = 0;
+  for (const person of people || []) {
+    const permissions = (person.permissions || {}) as Record<string, string>;
+    const allowed = person.role === "owner" || permissions.tasks === "view" || permissions.tasks === "edit";
+    if (!person.active || !allowed || done.has(String(person.id))) continue;
+    await notify(String(person.id), {
+      kind: "weekly",
+      body: "It's Friday — post your weekly update: done, next and blockers.",
+      link: "/dashboard/updates",
+      email: { to: String(person.email), subject: "Your weekly update" }
+    });
+    sent += 1;
+  }
+  return { sent };
+}

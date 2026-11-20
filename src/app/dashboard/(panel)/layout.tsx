@@ -8,7 +8,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const links: DeskLink[] = [{ href: "/dashboard", label: "Overview" }];
   for (const area of visibleAreas(user)) {
     links.push({ href: area.href, label: area.label });
-    if (area.id === "tasks") links.push({ href: "/dashboard/work", label: "Timesheets", child: true });
+    if (area.id === "tasks") {
+      links.push({ href: "/dashboard/tasks/projects", label: "Projects", child: true });
+      links.push({ href: "/dashboard/updates", label: "Weekly updates", child: true });
+      links.push({ href: "/dashboard/work", label: "Timesheets", child: true });
+    }
   }
   if (user.role === "owner") links.push({ href: "/dashboard/users", label: "People & access" });
   const [unread, running] = user.bootstrap

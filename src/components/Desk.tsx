@@ -21,7 +21,10 @@ export function Desk({
   timer?: { startedAt: string; title: string } | null;
 }) {
   const path = usePathname();
-  const active = (href: string) => (href === "/dashboard" ? path === href : path === href || path.startsWith(`${href}/`));
+  const matches = (href: string) => (href === "/dashboard" ? path === href : path === href || path.startsWith(`${href}/`));
+  // Only the most specific nav link lights up (e.g. Projects, not also Tasks).
+  const best = links.map((link) => link.href).filter(matches).sort((a, b) => b.length - a.length)[0];
+  const active = (href: string) => (links.some((link) => link.href === href) ? href === best : matches(href));
   return (
     <div className="min-h-screen bg-[#f6f4ef] text-ink lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
       <aside className="flex flex-col bg-ink text-paper lg:sticky lg:top-0 lg:h-screen">

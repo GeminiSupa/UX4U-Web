@@ -32,6 +32,14 @@ export type Task = {
   updated_at: string;
   completed_at: string | null;
   logged_minutes: number;
+  /** Workspace fields (supabase/workspace.sql); defaulted when the migration has not run. */
+  project_id: string | null;
+  points: number;
+  start_at: string | null;
+  submitted_at: string | null;
+  submission_note: string;
+  submission_url: string;
+  approved_by_name: string;
 };
 
 export type TimeEntry = {
@@ -54,6 +62,36 @@ export function isPriority(value: unknown): value is Priority {
   return (PRIORITIES as readonly string[]).includes(String(value));
 }
 
+/** Fills workspace columns so pages work before supabase/workspace.sql has run. */
+export function normalizeTask(row: Record<string, unknown>, logged = 0): Task {
+  return {
+    ...(row as unknown as Task),
+    estimate_minutes: Number(row.estimate_minutes) || 0,
+    logged_minutes: logged,
+    project_id: row.project_id ? String(row.project_id) : null,
+    points: Number(row.points) || 0,
+    start_at: (row.start_at as string) || null,
+    submitted_at: (row.submitted_at as string) || null,
+    submission_note: String(row.submission_note || ""),
+    submission_url: String(row.submission_url || ""),
+    approved_by_name: String(row.approved_by_name || "")
+  };
+}
+
+/** Managers (edit access on tasks) review submissions and award points. */
+export function canManageTasks(user: StaffUser) {
+  return can(user, "tasks", "edit");
+}
+
+/**
+ * "Done" means approved. Members submit for review instead, except for their own
+ * zero-point personal tasks, which they may close themselves.
+ */
+export function canCloseTask(user: StaffUser, task: Pick<Task, "created_by" | "assignee_id" | "points">) {
+  if (canManageTasks(user)) return true;
+  return task.created_by === user.id && (!task.assignee_id || task.assignee_id === user.id) && !task.points;
+}
+
 /** Members with view access can work on tasks assigned to or created by them; edit access manages all. */
 export function canModifyTask(user: StaffUser, task: Pick<Task, "assignee_id" | "created_by">) {
   if (can(user, "tasks", "edit")) return true;
@@ -71,7 +109,7 @@ export async function listTasks(): Promise<{ ready: boolean; tasks: Task[] }> {
     const minutes = new Map((totals.data || []).map((row) => [String(row.task_id), Number(row.minutes) || 0]));
     return {
       ready: true,
-      tasks: (tasks.data || []).map((row) => ({ ...(row as Task), logged_minutes: minutes.get(String(row.id)) || 0 }))
+      tasks: (tasks.data || []).map((row) => normalizeTask(row, minutes.get(String(row.id)) || 0))
     };
   } catch {
     return { ready: false, tasks: [] };
@@ -80,7 +118,7 @@ export async function listTasks(): Promise<{ ready: boolean; tasks: Task[] }> {
 
 export async function getTask(id: string): Promise<Task | null> {
   const { data } = await admin().from("tasks").select("*").eq("id", id).maybeSingle();
-  return data ? ({ ...(data as Task), logged_minutes: 0 } as Task) : null;
+  return data ? normalizeTask(data) : null;
 }
 
 export async function runningEntry(userId: string): Promise<TimeEntry | null> {
